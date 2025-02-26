@@ -8,7 +8,7 @@
             font-family: 'Comic Neue', cursive;
             margin: 20px;
             background-image: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), 
-                              url('https://wallsneedlove.com/cdn/shop/products/w0568_1s_Yellow-lemon-and-orange-sketch-wallpaper-Citrus-Grove_Repeating-Pattern-Sample-1.jpg?v=1734715911&width=1080');
+                              url('https://wallsneedlove.com/cdn/shop/products/w0568_1s_Yellow-lemon-and-orange-sketch-wallpaper-Citrus-Grove_Repeating-Pattern-Sample-1.jpg?v=1734715911&width=1800');
             background-size: cover;
             background-position: center;
         }
@@ -83,6 +83,8 @@
         .error { color: red; font-weight: bold; }
         .hint { color: #228b22; font-style: italic; }
         .warning { color: orange; font-weight: bold; }
+        .highlight { font-weight: bold; font-size: 1.2em; }
+        .final-results { font-weight: bold; font-size: 1.5em; }
     </style>
 </head>
 <body>
@@ -93,7 +95,7 @@
         <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales in current and future rounds.</p>
         <div id="inventory">
             <h2>Inventory</h2>
-            Bankroll: $<span id="bankroll">300.00</span><br>
+            <p class="highlight">Bankroll: $<span id="bankroll">300.00</span></p>
             Lemons: <span id="lemons">None</span><br>
             Sugar: <span id="sugar">0</span>
         </div>
@@ -127,7 +129,7 @@
                 <option value="lavender">Lavender ($0.60 per cup)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($75, sells 50 cups), Experienced ($150, sells 120 cups), Manager ($150, sells 50 cups + boosts others by 30%)</p>
+            <p class="note">Intern ($75, sells 50 cups), Experienced ($150, sells 120 cups), Manager ($150, sells 50 cups + boosts others by 30%). At least one employee required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -147,7 +149,6 @@
     </div>
 
     <script>
-        // Game constants
         const INITIAL_BANKROLL = 300;
         const MIN_WHOLESALE_LEMONS = 25;
         const WHOLESALE_INCREMENT = 25;
@@ -160,7 +161,7 @@
         const SPOILAGE_RATE = 0.1;
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
-            none: { name: "None", cost: 0, idealLemons: 3, idealSugar: 2 }, // Updated to 3 lemons, 2 sugar
+            none: { name: "None", cost: 0, idealLemons: 3, idealSugar: 2 },
             mint: { name: "Mint", cost: 0.3, idealLemons: 2, idealSugar: 3 },
             basil: { name: "Basil", cost: 0.4, idealLemons: 1, idealSugar: 4 },
             turbinado: { name: "Turbinado Sugar", cost: 0.2, idealLemons: 3, idealSugar: 2 },
@@ -173,7 +174,6 @@
             manager: { wage: 150, capacity: 50, boost: 0.3 }
         };
 
-        // Game state object
         const gameState = {
             round: 1,
             totalProfit: 0,
@@ -185,10 +185,9 @@
             sugarInventory: 0,
             vendorOffers: {},
             history: [],
-            poorQualityPenaltyNextRound: false // New state for next-round penalty
+            poorQualityPenaltyNextRound: false
         };
 
-        // DOM elements
         const elements = {
             roundIndicator: document.getElementById('roundIndicator'),
             bankroll: document.getElementById('bankroll'),
@@ -202,7 +201,6 @@
             costFeedback: document.getElementById('costFeedback')
         };
 
-        // Initialize game
         initializeGame();
 
         function initializeGame() {
@@ -222,7 +220,6 @@
             updateCostFeedback();
         }
 
-        // Generate vendor offers
         function generateVendorOffers() {
             const qualities = [1, 2, 3, 4];
             const topNotchOther = shuffle(qualities.slice(0,3)).slice(0,2);
@@ -240,7 +237,6 @@
             }));
         }
 
-        // Update lemon quality options
         function updateQualityOptions() {
             const vendor = document.getElementById('vendor').value;
             const offers = gameState.vendorOffers[vendor];
@@ -255,7 +251,6 @@
             updateCostFeedback();
         }
 
-        // Update inventory display
         function updateInventoryDisplay() {
             let lemonsStr = '';
             for (let q in gameState.lemonsInventory) {
@@ -268,12 +263,10 @@
             elements.bankroll.textContent = gameState.bankroll.toFixed(2);
         }
 
-        // Shuffle array helper
         function shuffle(array) {
             return array.sort(() => Math.random() - 0.5);
         }
 
-        // Calculate average lemon quality
         function calculateAverageQuality() {
             let totalQuality = 0;
             let totalLemons = 0;
@@ -287,7 +280,6 @@
             return totalLemons > 0 ? totalQuality / totalLemons : 0;
         }
 
-        // Real-time cost feedback
         function updateCostFeedback() {
             const vendor = document.getElementById('vendor').value;
             const qualitySelect = document.getElementById('lemonQuality');
@@ -315,7 +307,6 @@
             elements.costFeedback.className = remainingBankroll < 0 ? 'warning' : 'note';
         }
 
-        // Recipe advice
         function getRecipeAdvice(lemonsPerCup, sugarPerCup, specialIngredient) {
             const ideal = SPECIAL_INGREDIENTS[specialIngredient];
             const idealLemons = ideal.idealLemons;
@@ -345,7 +336,6 @@
             return advice;
         }
 
-        // Process round
         function processRound() {
             elements.errors.innerHTML = '';
             try {
@@ -365,7 +355,6 @@
                 const experienced = parseInt(document.getElementById('experienced').value);
                 const managers = parseInt(document.getElementById('managers').value);
 
-                // Validate inputs
                 if (vendor === 'wholesale' && buyLemons > 0 && (buyLemons < MIN_WHOLESALE_LEMONS || buyLemons % WHOLESALE_INCREMENT !== 0)) {
                     throw new Error(`For Wholesale, number of lemons must be at least ${MIN_WHOLESALE_LEMONS} and in multiples of ${WHOLESALE_INCREMENT}.`);
                 }
@@ -374,8 +363,10 @@
                     interns < 0 || experienced < 0 || managers < 0) {
                     throw new Error('Invalid input values.');
                 }
+                if (interns + experienced + managers === 0) {
+                    throw new Error('You must hire at least one employee to sell lemonade.');
+                }
 
-                // Calculate costs
                 const costLemons = buyLemons * price;
                 const costSugar = buySugar * SUGAR_COST;
                 const costSigns = signs * SIGN_COST;
@@ -391,7 +382,6 @@
                 gameState.bankroll -= totalCosts;
                 gameState.cumulativeExpenses += totalCosts;
 
-                // Update inventory
                 gameState.lemonsInventory[buyQuality] = (gameState.lemonsInventory[buyQuality] || 0) + buyLemons;
                 gameState.sugarInventory += buySugar;
 
@@ -404,11 +394,10 @@
                     throw new Error('Not enough lemons or sugar to produce even one cup.');
                 }
 
-                // Calculate taste score
                 const ideal = SPECIAL_INGREDIENTS[specialIngredient];
                 const lemonsDiff = Math.abs(ideal.idealLemons - lemonsPerCup);
                 const sugarDiff = Math.abs(ideal.idealSugar - sugarPerCup);
-                const recipeAccuracy = Math.max(1 - (lemonsDiff + sugarDiff) / 10, 0); // Ensure non-negative
+                const recipeAccuracy = Math.max(1 - (lemonsDiff + sugarDiff) / 10, 0);
                 const lemonQualityFactor = effectiveQuality / 4;
                 let tasteScore = lemonQualityFactor * recipeAccuracy;
                 if (lemonsPerCup === ideal.idealLemons && sugarPerCup === ideal.idealSugar) {
@@ -416,17 +405,14 @@
                 }
                 tasteScore = Math.min(tasteScore, 1.0);
 
-                // Calculate units produced
                 const maxUnitsFromLemons = Math.floor(totalLemons / lemonsPerCup);
                 const maxUnitsFromSugar = Math.floor(gameState.sugarInventory / sugarPerCup);
                 const unitsProduced = Math.min(maxUnitsFromLemons, maxUnitsFromSugar);
 
-                // Calculate special ingredient cost and deduct
                 const specialIngCost = unitsProduced * SPECIAL_INGREDIENTS[specialIngredient].cost;
                 gameState.bankroll -= specialIngCost;
                 gameState.cumulativeExpenses += specialIngCost;
 
-                // Use ingredients
                 const lemonsUsed = unitsProduced * lemonsPerCup;
                 let remainingLemons = lemonsUsed;
                 for (let q in gameState.lemonsInventory) {
@@ -439,43 +425,33 @@
                 }
                 gameState.sugarInventory -= unitsProduced * sugarPerCup;
 
-                // Calculate customers and sales
                 const signEffect = signs * 20;
                 const wordOfMouthEffect = Math.floor(tasteScore * 50);
-                const potentialCustomers = BASE_CUSTOMERS + signEffect;
+                const customerDemand = BASE_CUSTOMERS + signEffect + wordOfMouthEffect;
 
                 let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
                 const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
                 const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-                const potentialSales = Math.floor(potentialCustomers * tasteScore);
+                const potentialSales = Math.floor(customerDemand * tasteScore);
                 let baseSales = Math.min(unitsProduced, potentialSales);
-                
-                // Apply current round penalty (50% of effect)
-                const currentPenalty = (tasteScore < 0.5 || effectiveQuality < 2) ? 0.875 : 1.0; // 12.5% reduction
+
+                const currentPenalty = (tasteScore < 0.5 || effectiveQuality < 2) ? 0.875 : 1.0;
                 baseSales = Math.floor(baseSales * currentPenalty);
 
-                // Apply carryover penalty from last round (50% of effect)
                 if (gameState.poorQualityPenaltyNextRound) {
-                    baseSales = Math.floor(baseSales * 0.875); // Additional 12.5% reduction
-                    gameState.poorQualityPenaltyNextRound = false; // Reset after applying
+                    baseSales = Math.floor(baseSales * 0.875);
+                    gameState.poorQualityPenaltyNextRound = false;
                 }
 
-                // Add word of mouth effect
-                baseSales += wordOfMouthEffect;
-
-                // Limit sales by capacity
                 const sales = Math.min(baseSales, totalCapacity);
 
-                // Set penalty for next round if applicable
                 gameState.poorQualityPenaltyNextRound = tasteScore < 0.5 || effectiveQuality < 2;
 
-                // Calculate revenue
                 const revenue = sales * PRICE_PER_UNIT;
                 gameState.bankroll += revenue;
                 gameState.cumulativeRevenue += revenue;
 
-                // Calculate spoilage
                 let totalSpoiled = 0;
                 for (let q in gameState.lemonsInventory) {
                     const spoiled = Math.floor(gameState.lemonsInventory[q] * SPOILAGE_RATE);
@@ -486,7 +462,6 @@
                 gameState.bankroll -= spoilageCost;
                 gameState.cumulativeExpenses += spoilageCost;
 
-                // Calculate profit
                 const profit = revenue - totalCosts - specialIngCost - spoilageCost;
                 gameState.totalProfit += profit;
 
@@ -497,10 +472,10 @@
                 const nextWordOfMouth = Math.floor(tasteScore * 50);
                 let signsFeedback = `Signs brought in ${signEffect} extra customers.`;
                 let wordOfMouthFeedback = `Word of mouth from last round added ${gameState.wordOfMouthBonus} customers. Next round's word of mouth will add ${nextWordOfMouth} customers.`;
-                let salesLimitReason = sales === baseSales ? 'sales capacity' : 'production or demand';
+                let salesLimitReason = sales === baseSales ? 'sales capacity' : sales === unitsProduced ? 'production' : 'demand';
                 let additionalFeedback = '';
 
-                if (salesLimitReason !== 'sales capacity' && signs < 5 && Math.floor(potentialCustomers * tasteScore) < unitsProduced) {
+                if (salesLimitReason === 'demand' && signs < 5) {
                     additionalFeedback += '<p class="hint">More signs could attract more customers!</p>';
                 }
                 if (tasteScore < 0.8) {
@@ -510,16 +485,17 @@
                     additionalFeedback += '<p class="hint">Poor quality or taste this round will reduce next round\'s sales by 12.5%.</p>';
                 }
 
-                // Display results
+                const isFinalRound = gameState.round === MAX_ROUNDS;
+                const roundHeader = isFinalRound ? '<h2 class="final-results">FINAL RESULTS</h2>' : `<h2>Round ${gameState.round} Results</h2>`;
                 elements.results.innerHTML = `
-                    <h2>Round ${gameState.round} Results</h2>
+                    ${roundHeader}
                     <p>Taste Score: ${tasteScore.toFixed(2)} (Max 1.0 with ideal quality and recipe match)</p>
                     <p>Units Produced: ${unitsProduced}</p>
-                    <p>Potential Customers: ${potentialCustomers}</p>
+                    <p>Customer Demand: ${customerDemand} (${signsFeedback}, Word of Mouth: ${wordOfMouthEffect})</p>
                     <p>Sales Capacity: ${totalCapacity} cups</p>
-                    <p>Sales: ${sales} cups (limited by ${salesLimitReason}, Signs: ${signsFeedback}, Word of Mouth: ${wordOfMouthFeedback})</p>
+                    <p>Sales: ${sales} cups (limited by ${salesLimitReason})</p>
                     <p>Revenue: $${revenue.toFixed(2)}</p>
-                    <p>Expenses: $${(totalCosts + specialIngCost + spoilageCost).toFixed(2)} (Lemons: $${costLemons.toFixed(2)}, Sugar: $${costSugar.toFixed(2)}, Signs: $${costSigns.toFixed(2)}, Employees: $${costEmployees.toFixed(2)}, Special Ingredient: $${specialIngCost.toFixed(2)}, Spoilage: $${spoilageCost.toFixed(2)})</p>
+                    <p class="highlight">Expenses: $${(totalCosts + specialIngCost + spoilageCost).toFixed(2)} (Lemons: $${costLemons.toFixed(2)}, Sugar: $${costSugar.toFixed(2)}, Signs: $${costSigns.toFixed(2)}, Employees: $${costEmployees.toFixed(2)}, Special Ingredient: $${specialIngCost.toFixed(2)}, Spoilage: $${spoilageCost.toFixed(2)})</p>
                     <p>Profit this round: $${profit.toFixed(2)}</p>
                     <p>Profit Margin: ${profitMargin}</p>
                     <p>Efficiency Ratio: ${efficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
@@ -528,14 +504,11 @@
                     ${additionalFeedback}
                 `;
 
-                // Update word of mouth for next round
                 gameState.wordOfMouthBonus = nextWordOfMouth;
 
-                // Update history
                 gameState.history.push({ round: gameState.round, profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
                 elements.historyContent.innerHTML = gameState.history.map(h => `Round ${h.round}: Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
 
-                // Next round
                 gameState.round++;
                 if (gameState.round <= MAX_ROUNDS) {
                     generateVendorOffers();
@@ -551,12 +524,10 @@
             }
         }
 
-        // End game
         function endGame() {
             const cumulativeProfitMargin = gameState.cumulativeRevenue > 0 ? ((gameState.totalProfit / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
             const overallEfficiencyRatio = gameState.cumulativeRevenue > 0 ? ((gameState.cumulativeExpenses / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
             elements.results.innerHTML += `
-                <h2>Game Over</h2>
                 <p>Total Profit: $${gameState.totalProfit.toFixed(2)}</p>
                 <p>Cumulative Profit Margin: ${cumulativeProfitMargin}</p>
                 <p>Overall Efficiency Ratio: ${overallEfficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
@@ -565,7 +536,6 @@
             elements.restart.style.display = 'block';
         }
 
-        // Restart game
         function restartGame() {
             initializeGame();
             elements.inputForm.style.display = 'block';
@@ -576,7 +546,6 @@
             updateCostFeedback();
         }
 
-        // Event listeners for real-time cost updates
         const costInputs = ['vendor', 'lemonQuality', 'buyLemons', 'buySugar', 'signs', 'interns', 'experienced', 'managers'];
         costInputs.forEach(id => {
             const input = document.getElementById(id);
@@ -586,7 +555,6 @@
             }
         });
 
-        // Initial setup
         updateQualityOptions();
         updateCostFeedback();
     </script>
