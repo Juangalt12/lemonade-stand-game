@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Fremont Bank Lemonade Stand Game</title>
+    <title>Lemonade Stand Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -89,13 +89,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>Fremont Bank Lemonade Stand Game</h1>
-        <p id="roundIndicator">Round 1 of 6</p>
-        <p>Run your lemonade stand for 6 rounds to maximize profit! Manage your bankroll, inventory, and employees wisely.</p>
-        <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales in current and future rounds.</p>
+        <h1>Lemonade Stand Game</h1>
+        <p id="weekIndicator">Week 1 of 6</p>
+        <p>Make money fast during the 6 hottest weeks of the summer! Manage your bankroll, inventory, and employees wisely.</p>
+        <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales in current and future weeks.</p>
         <div id="inventory">
             <h2>Inventory</h2>
-            <p class="highlight">Bankroll: $<span id="bankroll">300.00</span></p>
+            <p class="highlight">Bankroll: $<span id="bankroll">500.00</span></p>
             Lemons: <span id="lemons">None</span><br>
             Sugar: <span id="sugar">0</span>
         </div>
@@ -136,26 +136,28 @@
             <input type="number" id="experienced" min="0" value="0"><br>
             <label for="managers">Number of Managers:</label>
             <input type="number" id="managers" min="0" value="0"><br>
-            <button type="button" onclick="processRound()">Submit Round</button>
+            <h2>Set Sales Price</h2>
+            <label for="salesPrice">Sales Price per Cup ($): </label>
+            <input type="number" id="salesPrice" min="0.01" step="0.01" value="2.00"><br>
+            <button type="button" onclick="processWeek()">Submit Week</button>
         </form>
         <div id="costFeedback" class="note"></div>
         <div id="errors" class="error"></div>
         <div id="results"></div>
         <div id="history">
-            <h2>Round History</h2>
-            <span id="historyContent">No rounds completed yet.</span>
+            <h2>Week History</h2>
+            <span id="historyContent">No weeks completed yet.</span>
         </div>
         <button id="restart" style="display:none;" onclick="restartGame()">Restart Game</button>
     </div>
 
     <script>
-        const INITIAL_BANKROLL = 300;
+        const INITIAL_BANKROLL = 500;
         const MIN_WHOLESALE_LEMONS = 25;
         const WHOLESALE_INCREMENT = 25;
         const SUGAR_COST = 0.10;
         const SIGN_COST = 20;
-        const PRICE_PER_UNIT = 10;
-        const MAX_ROUNDS = 6;
+        const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
         const BASE_CUSTOMERS = 100;
         const SPOILAGE_RATE = 0.1;
@@ -175,7 +177,7 @@
         };
 
         const gameState = {
-            round: 1,
+            week: 1,
             totalProfit: 0,
             cumulativeRevenue: 0,
             cumulativeExpenses: 0,
@@ -185,12 +187,13 @@
             sugarInventory: 0,
             vendorOffers: {},
             history: [],
-            poorQualityPenaltyNextRound: false,
-            previousRevenue: 0
+            poorQualityPenaltyNextWeek: false,
+            previousRevenue: 0,
+            firstWeekRevenue: 0
         };
 
         const elements = {
-            roundIndicator: document.getElementById('roundIndicator'),
+            weekIndicator: document.getElementById('weekIndicator'),
             bankroll: document.getElementById('bankroll'),
             lemons: document.getElementById('lemons'),
             sugar: document.getElementById('sugar'),
@@ -205,7 +208,7 @@
         initializeGame();
 
         function initializeGame() {
-            gameState.round = 1;
+            gameState.week = 1;
             gameState.totalProfit = 0;
             gameState.cumulativeRevenue = 0;
             gameState.cumulativeExpenses = 0;
@@ -214,8 +217,9 @@
             gameState.lemonsInventory = {1: 0, 2: 0, 3: 0, 4: 0};
             gameState.sugarInventory = 0;
             gameState.history = [];
-            gameState.poorQualityPenaltyNextRound = false;
+            gameState.poorQualityPenaltyNextWeek = false;
             gameState.previousRevenue = 0;
+            gameState.firstWeekRevenue = 0;
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
@@ -226,17 +230,17 @@
             const qualities = [1, 2, 3, 4];
             const topNotchOther = shuffle(qualities.slice(0,3)).slice(0,2);
             const topNotchQualities = [4, ...topNotchOther];
-            gameState.vendorOffers.topnotch = topNotchQualities.map(q => ({
-                quality: q,
-                name: QUALITY_NAMES[q],
-                price: (0.5 * q).toFixed(2)
-            }));
+            gameState.vendorOffers.topnotch = topNotchQualities.map(q => {
+                const basePrice = 0.5 * q;
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1; // Reduce by 40%, round to nearest 0.10
+                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
+            });
             const wholesaleQualities = shuffle(qualities).slice(0,3);
-            gameState.vendorOffers.wholesale = wholesaleQualities.map(q => ({
-                quality: q,
-                name: QUALITY_NAMES[q],
-                price: (0.5 * q * 0.7).toFixed(2)
-            }));
+            gameState.vendorOffers.wholesale = wholesaleQualities.map(q => {
+                const basePrice = 0.5 * q * 0.7;
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1; // Reduce by 40%, round to nearest 0.10
+                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
+            });
         }
 
         function updateQualityOptions() {
@@ -338,7 +342,7 @@
             return advice;
         }
 
-        function processRound() {
+        function processWeek() {
             elements.errors.innerHTML = '';
             try {
                 const vendor = document.getElementById('vendor').value;
@@ -356,13 +360,14 @@
                 const interns = parseInt(document.getElementById('interns').value);
                 const experienced = parseInt(document.getElementById('experienced').value);
                 const managers = parseInt(document.getElementById('managers').value);
+                const salesPrice = parseFloat(document.getElementById('salesPrice').value);
 
                 if (vendor === 'wholesale' && buyLemons > 0 && (buyLemons < MIN_WHOLESALE_LEMONS || buyLemons % WHOLESALE_INCREMENT !== 0)) {
                     throw new Error(`For Wholesale, number of lemons must be at least ${MIN_WHOLESALE_LEMONS} and in multiples of ${WHOLESALE_INCREMENT}.`);
                 }
                 if (buyLemons < 0 || buySugar < 0 || signs < 0 || signs > 5 || 
                     lemonsPerCup < 1 || lemonsPerCup > 5 || sugarPerCup < 1 || sugarPerCup > 5 ||
-                    interns < 0 || experienced < 0 || managers < 0) {
+                    interns < 0 || experienced < 0 || managers < 0 || salesPrice <= 0) {
                     throw new Error('Invalid input values.');
                 }
                 if (interns + experienced + managers === 0) {
@@ -387,7 +392,7 @@
                 gameState.lemonsInventory[buyQuality] = (gameState.lemonsInventory[buyQuality] || 0) + buyLemons;
                 gameState.sugarInventory += buySugar;
 
-                const effectiveQuality = gameState.round === 1 ? buyQuality : calculateAverageQuality();
+                const effectiveQuality = gameState.week === 1 ? buyQuality : calculateAverageQuality();
                 if (effectiveQuality === 0) {
                     throw new Error('No lemons available.');
                 }
@@ -441,16 +446,16 @@
                 const currentPenalty = (tasteScore < 0.5 || effectiveQuality < 2) ? 0.875 : 1.0;
                 baseSales = Math.floor(baseSales * currentPenalty);
 
-                if (gameState.poorQualityPenaltyNextRound) {
+                if (gameState.poorQualityPenaltyNextWeek) {
                     baseSales = Math.floor(baseSales * 0.875);
-                    gameState.poorQualityPenaltyNextRound = false;
+                    gameState.poorQualityPenaltyNextWeek = false;
                 }
 
                 const sales = Math.min(baseSales, totalCapacity);
 
-                gameState.poorQualityPenaltyNextRound = tasteScore < 0.5 || effectiveQuality < 2;
+                gameState.poorQualityPenaltyNextWeek = tasteScore < 0.5 || effectiveQuality < 2;
 
-                const revenue = sales * PRICE_PER_UNIT;
+                const revenue = sales * salesPrice;
                 gameState.bankroll += revenue;
                 gameState.cumulativeRevenue += revenue;
 
@@ -467,14 +472,33 @@
                 const profit = revenue - totalCosts - specialIngCost - spoilageCost;
                 gameState.totalProfit += profit;
 
-                const revenueGrowth = gameState.round === 1 || gameState.previousRevenue === 0 ? 'N/A' : (((revenue - gameState.previousRevenue) / gameState.previousRevenue) * 100).toFixed(2) + '%';
+                const revenueGrowth = gameState.week === 1 || gameState.previousRevenue === 0 ? 'N/A' : (((revenue - gameState.previousRevenue) / gameState.previousRevenue) * 100).toFixed(2) + '%';
                 const profitMargin = revenue > 0 ? ((profit / revenue) * 100).toFixed(2) + '%' : 'N/A';
                 const efficiencyRatio = revenue > 0 ? (((totalCosts + specialIngCost + spoilageCost) / revenue) * 100).toFixed(2) + '%' : 'N/A';
+
+                if (gameState.week === 1) {
+                    gameState.firstWeekRevenue = revenue;
+                }
+
+                // Calculate material cost per cup
+                const lemonCostPerCup = (lemonsPerCup * price);
+                const sugarCostPerCup = (sugarPerCup * SUGAR_COST);
+                const specialIngredientCostPerCup = SPECIAL_INGREDIENTS[specialIngredient].cost;
+                const materialCostPerCup = lemonCostPerCup + sugarCostPerCup + specialIngredientCostPerCup;
+
+                // Calculate total cost per cup including employees
+                const totalEmployeeCapacity = totalCapacity;
+                const employeeCostPerCup = totalEmployeeCapacity > 0 ? (costEmployees / totalEmployeeCapacity) : 0;
+                const totalCostPerCup = materialCostPerCup + employeeCostPerCup;
+
+                // Calculate profit margin per cup
+                const profitPerCup = salesPrice - totalCostPerCup;
+                const profitMarginPerCup = salesPrice > 0 ? (profitPerCup / salesPrice * 100).toFixed(2) + '%' : 'N/A';
 
                 const recipeAdvice = getRecipeAdvice(lemonsPerCup, sugarPerCup, specialIngredient);
                 const nextWordOfMouth = Math.floor(tasteScore * 50);
                 let signsFeedback = `Signs brought in ${signEffect} extra customers.`;
-                let wordOfMouthFeedback = `Word of mouth from last round added ${gameState.wordOfMouthBonus} customers. Next round's word of mouth will add ${nextWordOfMouth} customers.`;
+                let wordOfMouthFeedback = `Word of mouth from last week added ${gameState.wordOfMouthBonus} customers. Next week's word of mouth will add ${nextWordOfMouth} customers.`;
                 let salesLimitReason = sales === baseSales ? 'sales capacity' : sales === unitsProduced ? 'production' : 'demand';
                 let additionalFeedback = '';
 
@@ -482,25 +506,28 @@
                     additionalFeedback += '<p class="hint">More signs could attract more customers!</p>';
                 }
                 if (tasteScore < 0.8) {
-                    additionalFeedback += '<p class="hint">Better taste could increase word of mouth next round!</p>';
+                    additionalFeedback += '<p class="hint">Better taste could increase word of mouth next week!</p>';
                 }
-                if (gameState.poorQualityPenaltyNextRound) {
-                    additionalFeedback += '<p class="hint">Poor quality or taste this round will reduce next round\'s sales by 12.5%.</p>';
+                if (gameState.poorQualityPenaltyNextWeek) {
+                    additionalFeedback += '<p class="hint">Poor quality or taste this week will reduce next week\'s sales by 12.5%.</p>';
                 }
 
-                const isFinalRound = gameState.round === MAX_ROUNDS;
-                const roundHeader = isFinalRound ? '<h2 class="final-results">FINAL RESULTS</h2>' : `<h2>Round ${gameState.round} Results</h2>`;
+                const isFinalWeek = gameState.week === MAX_WEEKS;
+                const weekHeader = isFinalWeek ? '<h2 class="final-results">FINAL RESULTS</h2>' : `<h2>Week ${gameState.week} Results</h2>`;
                 elements.results.innerHTML = `
-                    ${roundHeader}
+                    ${weekHeader}
                     <p>Taste Score: ${tasteScore.toFixed(2)} (Max 1.0 with ideal quality and recipe match)</p>
                     <p>Units Produced: ${unitsProduced}</p>
                     <p>Customer Demand: ${customerDemand} (${signsFeedback}, Word of Mouth: ${wordOfMouthEffect})</p>
                     <p>Sales Capacity: ${totalCapacity} cups</p>
                     <p>Sales: ${sales} cups (limited by ${salesLimitReason})</p>
+                    <p>Material Cost per Cup: $${materialCostPerCup.toFixed(2)}</p>
+                    <p>Total Cost per Cup (including employees): $${totalCostPerCup.toFixed(2)}</p>
+                    <p>Profit Margin per Cup: ${profitMarginPerCup}</p>
                     <p>Revenue: $${revenue.toFixed(2)}</p>
                     <p>Revenue Growth: ${revenueGrowth}</p>
                     <p class="highlight">Expenses: $${(totalCosts + specialIngCost + spoilageCost).toFixed(2)} (Lemons: $${costLemons.toFixed(2)}, Sugar: $${costSugar.toFixed(2)}, Signs: $${costSigns.toFixed(2)}, Employees: $${costEmployees.toFixed(2)}, Special Ingredient: $${specialIngCost.toFixed(2)}, Spoilage: $${spoilageCost.toFixed(2)})</p>
-                    <p>Profit this round: $${profit.toFixed(2)}</p>
+                    <p>Profit this week: $${profit.toFixed(2)}</p>
                     <p>Profit Margin: ${profitMargin}</p>
                     <p>Efficiency Ratio: ${efficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
                     <p>Total Profit: $${gameState.totalProfit.toFixed(2)}</p>
@@ -509,17 +536,17 @@
                 `;
 
                 gameState.wordOfMouthBonus = nextWordOfMouth;
-                gameState.history.push({ round: gameState.round, revenue: revenue.toFixed(2), profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
+                gameState.history.push({ week: gameState.week, revenue: revenue.toFixed(2), revenueGrowth: revenueGrowth, profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
                 gameState.previousRevenue = revenue;
 
-                elements.historyContent.innerHTML = gameState.history.map(h => `Round ${h.round}: Revenue $${h.revenue}, Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
+                elements.historyContent.innerHTML = gameState.history.map(h => `Week ${h.week}: Revenue $${h.revenue}, Revenue Growth ${h.revenueGrowth}, Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
 
-                gameState.round++;
-                if (gameState.round <= MAX_ROUNDS) {
+                gameState.week++;
+                if (gameState.week <= MAX_WEEKS) {
                     generateVendorOffers();
                     updateQualityOptions();
                     updateInventoryDisplay();
-                    elements.roundIndicator.textContent = `Round ${gameState.round} of ${MAX_ROUNDS}`;
+                    elements.weekIndicator.textContent = `Week ${gameState.week} of ${MAX_WEEKS}`;
                 } else {
                     endGame();
                 }
@@ -532,9 +559,11 @@
         function endGame() {
             const cumulativeProfitMargin = gameState.cumulativeRevenue > 0 ? ((gameState.totalProfit / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
             const overallEfficiencyRatio = gameState.cumulativeRevenue > 0 ? ((gameState.cumulativeExpenses / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
+            const cumulativeRevenueGrowth = gameState.firstWeekRevenue === 0 ? 'N/A' : (((gameState.cumulativeRevenue - gameState.firstWeekRevenue) / gameState.firstWeekRevenue) * 100).toFixed(2) + '%';
             elements.results.innerHTML += `
                 <p class="highlight">Total Profit: $${gameState.totalProfit.toFixed(2)}</p>
                 <p class="highlight">Cumulative Revenue: $${gameState.cumulativeRevenue.toFixed(2)}</p>
+                <p class="highlight">Cumulative Revenue Growth: ${cumulativeRevenueGrowth}</p>
                 <p class="highlight">Cumulative Profit Margin: ${cumulativeProfitMargin}</p>
                 <p class="highlight">Overall Efficiency Ratio: ${overallEfficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
             `;
@@ -552,7 +581,7 @@
             updateCostFeedback();
         }
 
-        const costInputs = ['vendor', 'lemonQuality', 'buyLemons', 'buySugar', 'signs', 'interns', 'experienced', 'managers'];
+        const costInputs = ['vendor', 'lemonQuality', 'buyLemons', 'buySugar', 'signs', 'interns', 'experienced', 'managers', 'salesPrice'];
         costInputs.forEach(id => {
             const input = document.getElementById(id);
             input.addEventListener('change', updateCostFeedback);
