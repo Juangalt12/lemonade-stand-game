@@ -128,7 +128,7 @@
                 <option value="lavender">Lavender ($0.42 per cup)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($50, sells 70 cups), Experienced ($120, sells 140 cups), Manager ($130, sells 70 cups + boosts others by 30%). At least one employee required.</p>
+            <p class="note">Intern ($44, sells 70 cups), Experienced ($106, sells 200 cups), Manager ($114, sells 100 cups + boosts others by 30%). At least one employee required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -139,7 +139,7 @@
             <div id="costFeedback" class="note"></div>
             <label for="salesPrice">Sales Price per Cup ($): </label>
             <input type="number" id="salesPrice" min="0.01" step="0.01" value="2.00"><br>
-            <p class="note">Note: Higher prices reduce demand (e.g., $0.50 above $1.75 cuts demand by 25%).</p>
+            <p class="note">Note: Prices below $2.00 increase demand (e.g., ≤ $1.50: +50%), above decrease it (e.g., > $2.50: -50%).</p>
             <button type="button" onclick="processWeek()">Submit Week</button>
         </form>
         <div id="errors" class="error"></div>
@@ -170,9 +170,9 @@
             lavender: { name: "Lavender", cost: 0.42 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 50, capacity: 70 },
-            experienced: { wage: 120, capacity: 140 },
-            manager: { wage: 130, capacity: 70, boost: 0.3 }
+            intern: { wage: 44, capacity: 70 },
+            experienced: { wage: 106, capacity: 200 },
+            manager: { wage: 114, capacity: 100, boost: 0.3 }
         };
 
         const gameState = {
@@ -283,6 +283,24 @@
             return totalLemons > 0 ? totalQuality / totalLemons : 0;
         }
 
+        function getRecipeAdvice(lemonsPerCup) {
+            if (lemonsPerCup < 3) {
+                const moreLemons = 3 - lemonsPerCup;
+                return `Adding ${moreLemons} more lemon(s) will significantly boost demand!`;
+            } else {
+                return "Your recipe looks great! The lemons are perfect.";
+            }
+        }
+
+        function calculateDemandAdjustment(salesPrice) {
+            if (salesPrice <= 1.50) return 1.50; // 50% increase
+            else if (salesPrice <= 1.75) return 1.25; // 25% increase
+            else if (salesPrice <= 2.00) return 1.10; // 10% increase
+            else if (salesPrice <= 2.25) return 0.90; // 10% decrease
+            else if (salesPrice <= 2.50) return 0.75; // 25% decrease
+            else return 0.50; // 50% decrease
+        }
+
         function updateCostFeedback() {
             const vendor = document.getElementById('vendor').value;
             const qualitySelect = document.getElementById('lemonQuality');
@@ -309,7 +327,6 @@
                                 (managers * EMPLOYEE_TYPES.manager.wage);
             const totalPurchaseCost = costLemons + costSugar + costSigns + costEmployees;
 
-            // Calculate cost per cup
             const materialCostPerCup = (lemonsPerCup * price) + (sugarPerCup * SUGAR_COST) + specialIngredientCost;
             let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
@@ -380,16 +397,7 @@
                     throw new Error('Not enough lemons or sugar to produce even one cup.');
                 }
 
-                const ideal = SPECIAL_INGREDIENTS[specialIngredient];
-                const lemonsDiff = Math.abs(ideal.idealLemons - lemonsPerCup);
-                const sugarDiff = Math.abs(ideal.idealSugar - sugarPerCup);
-                const recipeAccuracy = Math.max(1 - (lemonsDiff + sugarDiff) / 10, 0);
-                const lemonQualityFactor = effectiveQuality / 4;
-                let tasteScore = lemonQualityFactor * recipeAccuracy;
-                if (lemonsPerCup === ideal.idealLemons && sugarPerCup === ideal.idealSugar) {
-                    tasteScore += 0.1;
-                }
-                tasteScore = Math.min(tasteScore, 1.0);
+                const tasteScore = (lemonsPerCup / 3 + sugarPerCup / 3) / 2 * (effectiveQuality / 4);
 
                 const maxUnitsFromLemons = Math.floor(totalLemons / lemonsPerCup);
                 const maxUnitsFromSugar = Math.floor(gameState.sugarInventory / sugarPerCup);
@@ -413,7 +421,10 @@
 
                 const signEffect = signs * 20;
                 const wordOfMouthEffect = Math.floor(tasteScore * 50);
-                const customerDemand = BASE_CUSTOMERS + signEffect + wordOfMouthEffect;
+                const lemonEffect = (lemonsPerCup - 1) * 50;
+                const baseDemand = BASE_CUSTOMERS + signEffect + wordOfMouthEffect + lemonEffect;
+                const demandAdjustment = calculateDemandAdjustment(salesPrice);
+                const customerDemand = Math.floor(baseDemand * demandAdjustment);
 
                 let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
                 const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
@@ -459,7 +470,7 @@
                     gameState.firstWeekRevenue = revenue;
                 }
 
-                const recipeAdvice = getRecipeAdvice(lemonsPerCup, sugarPerCup, specialIngredient);
+                const recipeAdvice = getRecipeAdvice(lemonsPerCup);
                 const nextWordOfMouth = Math.floor(tasteScore * 50);
                 let signsFeedback = `Signs brought in ${signEffect} extra customers.`;
                 let wordOfMouthFeedback = `Word of mouth from last week added ${gameState.wordOfMouthBonus} customers. Next week's word of mouth will add ${nextWordOfMouth} customers.`;
