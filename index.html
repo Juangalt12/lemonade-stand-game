@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Fremont Bank Lemonade Stand Game</title>
+    <title>Lemonade Stand Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -186,7 +186,7 @@
             vendorOffers: {},
             history: [],
             poorQualityPenaltyNextRound: false,
-            previousRevenue: 0 // New: Store revenue from previous round
+            previousRevenue: 0
         };
 
         const elements = {
@@ -510,7 +510,7 @@
 
                 gameState.wordOfMouthBonus = nextWordOfMouth;
                 gameState.history.push({ round: gameState.round, revenue: revenue.toFixed(2), profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
-                gameState.previousRevenue = revenue; // Update previous revenue for next round
+                gameState.previousRevenue = revenue;
 
                 elements.historyContent.innerHTML = gameState.history.map(h => `Round ${h.round}: Revenue $${h.revenue}, Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
 
