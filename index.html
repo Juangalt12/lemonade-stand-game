@@ -185,7 +185,8 @@
             sugarInventory: 0,
             vendorOffers: {},
             history: [],
-            poorQualityPenaltyNextRound: false
+            poorQualityPenaltyNextRound: false,
+            previousRevenue: 0 // New: Store revenue from previous round
         };
 
         const elements = {
@@ -214,6 +215,7 @@
             gameState.sugarInventory = 0;
             gameState.history = [];
             gameState.poorQualityPenaltyNextRound = false;
+            gameState.previousRevenue = 0;
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
@@ -303,7 +305,7 @@
             const totalPurchaseCost = costLemons + costSugar + costSigns + costEmployees;
             const remainingBankroll = gameState.bankroll - totalPurchaseCost;
 
-            elements.costFeedback.innerHTML = `Purchases will cost $${totalPurchaseCost.toFixed(2)}, leaving $${remainingBankroll.toFixed(2)} in bankroll. Additional costs for special ingredients will apply.`;
+            elements.costFeedback.innerHTML = `<span class="highlight">Purchases will cost $${totalPurchaseCost.toFixed(2)}, leaving $${remainingBankroll.toFixed(2)} in bankroll.</span> Additional costs for special ingredients will apply.`;
             elements.costFeedback.className = remainingBankroll < 0 ? 'warning' : 'note';
         }
 
@@ -465,6 +467,7 @@
                 const profit = revenue - totalCosts - specialIngCost - spoilageCost;
                 gameState.totalProfit += profit;
 
+                const revenueGrowth = gameState.round === 1 || gameState.previousRevenue === 0 ? 'N/A' : (((revenue - gameState.previousRevenue) / gameState.previousRevenue) * 100).toFixed(2) + '%';
                 const profitMargin = revenue > 0 ? ((profit / revenue) * 100).toFixed(2) + '%' : 'N/A';
                 const efficiencyRatio = revenue > 0 ? (((totalCosts + specialIngCost + spoilageCost) / revenue) * 100).toFixed(2) + '%' : 'N/A';
 
@@ -495,6 +498,7 @@
                     <p>Sales Capacity: ${totalCapacity} cups</p>
                     <p>Sales: ${sales} cups (limited by ${salesLimitReason})</p>
                     <p>Revenue: $${revenue.toFixed(2)}</p>
+                    <p>Revenue Growth: ${revenueGrowth}</p>
                     <p class="highlight">Expenses: $${(totalCosts + specialIngCost + spoilageCost).toFixed(2)} (Lemons: $${costLemons.toFixed(2)}, Sugar: $${costSugar.toFixed(2)}, Signs: $${costSigns.toFixed(2)}, Employees: $${costEmployees.toFixed(2)}, Special Ingredient: $${specialIngCost.toFixed(2)}, Spoilage: $${spoilageCost.toFixed(2)})</p>
                     <p>Profit this round: $${profit.toFixed(2)}</p>
                     <p>Profit Margin: ${profitMargin}</p>
@@ -505,9 +509,10 @@
                 `;
 
                 gameState.wordOfMouthBonus = nextWordOfMouth;
+                gameState.history.push({ round: gameState.round, revenue: revenue.toFixed(2), profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
+                gameState.previousRevenue = revenue; // Update previous revenue for next round
 
-                gameState.history.push({ round: gameState.round, profit: profit.toFixed(2), sales, profitMargin, efficiencyRatio });
-                elements.historyContent.innerHTML = gameState.history.map(h => `Round ${h.round}: Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
+                elements.historyContent.innerHTML = gameState.history.map(h => `Round ${h.round}: Revenue $${h.revenue}, Profit $${h.profit}, Sales ${h.sales}, Profit Margin ${h.profitMargin}, Efficiency Ratio ${h.efficiencyRatio}`).join('<br>');
 
                 gameState.round++;
                 if (gameState.round <= MAX_ROUNDS) {
@@ -528,9 +533,10 @@
             const cumulativeProfitMargin = gameState.cumulativeRevenue > 0 ? ((gameState.totalProfit / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
             const overallEfficiencyRatio = gameState.cumulativeRevenue > 0 ? ((gameState.cumulativeExpenses / gameState.cumulativeRevenue) * 100).toFixed(2) + '%' : 'N/A';
             elements.results.innerHTML += `
-                <p>Total Profit: $${gameState.totalProfit.toFixed(2)}</p>
-                <p>Cumulative Profit Margin: ${cumulativeProfitMargin}</p>
-                <p>Overall Efficiency Ratio: ${overallEfficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
+                <p class="highlight">Total Profit: $${gameState.totalProfit.toFixed(2)}</p>
+                <p class="highlight">Cumulative Revenue: $${gameState.cumulativeRevenue.toFixed(2)}</p>
+                <p class="highlight">Cumulative Profit Margin: ${cumulativeProfitMargin}</p>
+                <p class="highlight">Overall Efficiency Ratio: ${overallEfficiencyRatio} (Expenses as a percentage of revenue, lower is better)</p>
             `;
             elements.inputForm.style.display = 'none';
             elements.restart.style.display = 'block';
