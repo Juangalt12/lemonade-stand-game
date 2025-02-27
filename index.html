@@ -110,10 +110,10 @@
             <label for="specialIngredient">Special Ingredient:</label>
             <select id="specialIngredient">
                 <option value="none">None (Simple Cup)</option>
-                <option value="mint">Mint ($0.21 per cup, +10.5% demand)</option>
-                <option value="basil">Basil ($0.28 per cup, +14% demand)</option>
-                <option value="ginger">Ginger ($0.35 per cup, +17.5% demand)</option>
-                <option value="lavender">Lavender ($0.42 per cup, +21% demand)</option>
+                <option value="mint">Mint ($0.21 per cup, +4% demand)</option>
+                <option value="basil">Basil ($0.28 per cup, +6% demand)</option>
+                <option value="ginger">Ginger ($0.35 per cup, +10% demand)</option>
+                <option value="lavender">Lavender ($0.42 per cup, +20% demand)</option>
             </select><br>
             <p class="note">Using a special ingredient doubles your tips!</p>
             <h2>Choose Cup Type</h2>
@@ -124,7 +124,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($40, sells 70 cups), Experienced ($100, sells 200 cups), Manager ($90, sells 120 cups + boosts others by 30%). At least one required.</p>
+            <p class="note">Intern ($40, sells 80 cups), Experienced ($100, sells 210 cups), Manager ($90, sells 130 cups + boosts others by 30%). At least one required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -155,15 +155,15 @@
         const SIGN_COST = 20;
         const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
-        const BASE_CUSTOMERS = 270;
+        const BASE_CUSTOMERS = 340;  // Increased by 70 from 270
         const SPOILAGE_RATE = 0.1;
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
-            mint: { name: "Mint", cost: 0.21, demandBoost: 0.02 },
-            basil: { name: "Basil", cost: 0.28, demandBoost: 0.03 },
-            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.05 },
-            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.10 }
+            mint: { name: "Mint", cost: 0.21, demandBoost: 0.04 },  // Doubled from 0.02
+            basil: { name: "Basil", cost: 0.28, demandBoost: 0.06 },  // Doubled from 0.03
+            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.10 },  // Doubled from 0.05
+            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.20 }  // Doubled from 0.10
         };
         const CUP_TYPES = {
             paper: { name: "Cheap Paper Cups", cost: 0.03, demandBoost: -0.05 },
@@ -171,9 +171,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 40, capacity: 70 },
-            experienced: { wage: 100, capacity: 200 },
-            manager: { wage: 90, capacity: 120, boost: 0.3 }
+            intern: { wage: 40, capacity: 80 },  // Increased by 10 from 70
+            experienced: { wage: 100, capacity: 210 },  // Increased by 10 from 200
+            manager: { wage: 90, capacity: 130, boost: 0.3 }  // Increased by 10 from 120
         };
 
         const gameState = {
@@ -195,7 +195,7 @@
             loanTaken: false,
             loanAmount: 0,
             remainingLoan: 0,
-            loanInterestRate: 0.05, // 5% per week
+            loanInterestRate: 0.05,
             loanRepaymentWeeks: 5
         };
 
@@ -285,13 +285,13 @@
             const topNotchQualities = [4, ...topNotchOther];
             gameState.vendorOffers.topnotch = topNotchQualities.map(q => {
                 const basePrice = 0.5 * q;
-                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1;
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1; // Reduced by 10 cents
                 return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
             const wholesaleQualities = shuffle(qualities).slice(0,3);
             gameState.vendorOffers.wholesale = wholesaleQualities.map(q => {
                 const basePrice = 0.5 * q * 0.7;
-                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1;
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1; // Reduced by 10 cents
                 return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
         }
@@ -337,15 +337,9 @@
             return totalLemons > 0 ? totalQuality / totalLemons : 0;
         }
 
-        function getRecipeDemandMultiplier(lemons, sugar) {
-            if (lemons === 1 && sugar === 1) return 0.75;         // -25%
-            if (lemons === 2 && sugar === 2) return 1.0;          // Breakeven
-            if (lemons === 3 && sugar === 3) return 1.25;         // +25%
-            if ((lemons === 2 && sugar === 3) || (lemons === 3 && sugar === 2)) return 1.125; // +12.5%
-            if ((lemons === 1 && sugar === 2) || (lemons === 2 && sugar === 1)) return 0.875; // -12.5%
-            if ((lemons === 1 && sugar === 3) || (lemons === 3 && sugar === 1)) return 0.75;  // -25%
-            return 1.0; // Default for other combinations
-        }
+function getRecipeDemandMultiplier(lemons, sugar) {
+    return 0.70 + 0.20 * lemons + 0.05 * sugar;
+}
 
         function updateCostFeedback() {
             const vendor = document.getElementById('vendor').value;
