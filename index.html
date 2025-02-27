@@ -54,9 +54,18 @@
             transform: scale(1.05);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-        #inventory { background: #fffacd; border-color: #ffd700; }
-        #results { background: #e0ffe0; border-color: #32cd32; }
-        #history { background: #f0f8ff; border-color: #4682b4; }
+        #inventory {
+            background: #fffacd;
+            border-color: #ffd700;
+        }
+        #results {
+            background: #e0ffe0;
+            border-color: #32cd32;
+        }
+        #history {
+            background: #f0f8ff;
+            border-color: #4682b4;
+        }
         #costFeedback {
             background: #fafad2;
             border-color: #f4a460;
@@ -86,7 +95,7 @@
         <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales. Tips are added each week!</p>
         <div id="inventory">
             <h2>Inventory</h2>
-            <p class="highlight">Bankroll: $<span id="bankroll">600.00</span></p>
+            <p class="highlight">Bankroll: $<span id="bankroll">650.00</span></p>
             Lemons: <span id="lemons">None</span><br>
             Sugar: <span id="sugar">0</span>
         </div>
@@ -150,15 +159,15 @@
     </div>
 
     <script>
-        const INITIAL_BANKROLL = 600;
+        const INITIAL_BANKROLL = 650;  // Increased from 600 to 650
         const MIN_WHOLESALE_LEMONS = 25;
         const WHOLESALE_INCREMENT = 25;
         const SUGAR_COST = 0.05;
         const SIGN_COST = 20;
         const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
-        const BASE_CUSTOMERS = 270;
-        const SPOILAGE_RATE = 0.1;
+        const BASE_CUSTOMERS = 320;  // Increased from 270 to 320
+        const SPOILAGE_RATE = 0.15;  // Increased from 0.1 to 0.15 (15%)
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
@@ -429,21 +438,25 @@
 
             gameState.cumulativeExpenses += totalVariableCosts;
 
-            const totalLemonsUsed = cupsSold * lemonsPerCup;
-            const totalSugarUsed = cupsSold * sugarPerCup;
-            let remainingLemonsToUse = totalLemonsUsed;
+            const lemonsNeeded = cupsSold * lemonsPerCup;
+            let remainingLemonsToUse = lemonsNeeded;
+            let totalQualityUsed = 0;
+            let actualLemonsUsed = 0;
             for (let q = 4; q >= 1; q--) {
-                if (remainingLemonsToUse > 0) {
+                if (remainingLemonsToUse > 0 && gameState.lemonsInventory[q] > 0) {
                     const lemonsToUse = Math.min(gameState.lemonsInventory[q], remainingLemonsToUse);
                     gameState.lemonsInventory[q] -= lemonsToUse;
                     remainingLemonsToUse -= lemonsToUse;
+                    totalQualityUsed += lemonsToUse * q;
+                    actualLemonsUsed += lemonsToUse;
                 }
             }
-            gameState.sugarInventory -= totalSugarUsed;
+            const avgQualityUsed = actualLemonsUsed > 0 ? totalQualityUsed / actualLemonsUsed : 0;
+            gameState.poorQualityPenaltyNextWeek = avgQualityUsed < 2;
+            gameState.wordOfMouthBonus = avgQualityUsed > 3 ? Math.floor(revenue * 0.1) : 0;
 
-            const avgQuality = calculateAverageQuality();
-            gameState.poorQualityPenaltyNextWeek = avgQuality < 2;
-            gameState.wordOfMouthBonus = avgQuality > 3 ? Math.floor(revenue * 0.1) : 0;
+            const totalSugarUsed = cupsSold * sugarPerCup;
+            gameState.sugarInventory -= totalSugarUsed;
 
             const weekResult = `Week ${gameState.week} Results:<br>
                 Cups Sold: ${cupsSold}<br>
@@ -452,7 +465,7 @@
                 Tips: $${tips.toFixed(2)}<br>
                 Spoiled Lemons: ${spoiledLemons} (Cost: $${spoilageCost.toFixed(2)})<br>
                 Profit: $${profit.toFixed(2)}<br>
-                Average Lemon Quality Used: ${avgQuality.toFixed(2)}<br>
+                Average Lemon Quality Used: ${avgQualityUsed.toFixed(2)}<br>
                 ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
 
