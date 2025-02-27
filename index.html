@@ -122,11 +122,12 @@
             <label for="specialIngredient">Special Ingredient:</label>
             <select id="specialIngredient">
                 <option value="none">None (Simple Cup)</option>
-                <option value="mint">Mint ($0.21 per cup)</option>
-                <option value="basil">Basil ($0.28 per cup)</option>
-                <option value="ginger">Ginger ($0.35 per cup)</option>
-                <option value="lavender">Lavender ($0.42 per cup)</option>
+                <option value="mint">Mint ($0.21 per cup, +10.5% demand)</option>
+                <option value="basil">Basil ($0.28 per cup, +14% demand)</option>
+                <option value="ginger">Ginger ($0.35 per cup, +17.5% demand)</option>
+                <option value="lavender">Lavender ($0.42 per cup, +21% demand)</option>
             </select><br>
+            <p class="note">Using a special ingredient doubles your tips!</p>
             <h2>Choose Cup Type</h2>
             <label for="cupType">Cup Type:</label>
             <select id="cupType">
@@ -171,10 +172,10 @@
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
-            mint: { name: "Mint", cost: 0.21, demandBoost: 0.02 },
-            basil: { name: "Basil", cost: 0.28, demandBoost: 0.03 },
-            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.05 },
-            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.10 }
+            mint: { name: "Mint", cost: 0.21, demandBoost: 0.105 },    // +10.5%
+            basil: { name: "Basil", cost: 0.28, demandBoost: 0.14 },   // +14%
+            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.175 },// +17.5%
+            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.21 } // +21%
         };
         const CUP_TYPES = {
             paper: { name: "Cheap Paper Cups", cost: 0.03, demandBoost: -0.05 },
@@ -191,8 +192,8 @@
             week: 1,
             bankroll: INITIAL_BANKROLL,
             totalProfit: 0,
-            cumulativeRevenue: 0,
-            cumulativeExpenses: 0,
+            cumulativeIncome: 0,  // Tracks total income (revenue + tips)
+            cumulativeExpenses: 0, // Tracks total expenses
             wordOfMouthBonus: 0,
             lemonsInventory: {1: 0, 2: 0, 3: 0, 4: 0},
             sugarInventory: 0,
@@ -222,7 +223,7 @@
             gameState.week = 1;
             gameState.bankroll = INITIAL_BANKROLL;
             gameState.totalProfit = 0;
-            gameState.cumulativeRevenue = 0;
+            gameState.cumulativeIncome = 0;
             gameState.cumulativeExpenses = 0;
             gameState.wordOfMouthBonus = 0;
             gameState.lemonsInventory = {1: 0, 2: 0, 3: 0, 4: 0};
@@ -386,7 +387,7 @@
             }
 
             gameState.bankroll -= totalCost;
-            gameState.cumulativeExpenses += totalCost;
+
             gameState.lemonsInventory[quality] += buyLemons;
             gameState.sugarInventory += buySugar;
 
@@ -395,7 +396,7 @@
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
             let baseDemand = BASE_CUSTOMERS;
-            baseDemand += (gameState.week - 1) * 20;  // Natural increase in base demand by 20 each week
+            baseDemand += (gameState.week - 1) * 20;
             baseDemand += signs * 20;
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
@@ -411,7 +412,6 @@
 
             const cupsSold = Math.min(totalCapacity, totalDemand, Math.floor((gameState.lemonsInventory[1] + gameState.lemonsInventory[2] + gameState.lemonsInventory[3] + gameState.lemonsInventory[4]) / lemonsPerCup), Math.floor(gameState.sugarInventory / sugarPerCup));
             const revenue = cupsSold * salesPrice;
-            gameState.cumulativeRevenue += revenue;
             gameState.bankroll += revenue;
 
             const lemonCostPerCup = lemonsPerCup * lemonPrice;
@@ -429,15 +429,20 @@
             }
             const spoilageCost = spoiledLemons * SPOILAGE_COST_PER_LEMON;
             gameState.bankroll -= spoilageCost;
-            gameState.cumulativeExpenses += spoilageCost;
-            const tips = Math.floor(Math.random() * 61) + 10;
+
+            let tips = Math.floor(Math.random() * 61) + 10;
+            if (specialIngredient !== "none") {
+                tips *= 2;  // Double tips if a special ingredient is used
+            }
             gameState.bankroll += tips;
 
             const totalExpenses = fixedCosts + totalVariableCosts + spoilageCost;
-            const profit = revenue + tips - totalExpenses;
+            const totalIncome = revenue + tips;
+            const weeklyEfficiencyRatio = totalExpenses > 0 ? (totalIncome / totalExpenses).toFixed(2) : 'N/A';
+            gameState.cumulativeIncome += totalIncome;
+            gameState.cumulativeExpenses += totalExpenses;
+            const profit = totalIncome - totalExpenses;
             gameState.totalProfit += profit;
-
-            gameState.cumulativeExpenses += totalVariableCosts;
 
             const lemonsNeeded = cupsSold * lemonsPerCup;
             let remainingLemonsToUse = lemonsNeeded;
@@ -467,6 +472,7 @@
                 Spoiled Lemons: ${spoiledLemons} (Cost: $${spoilageCost.toFixed(2)})<br>
                 Profit: $${profit.toFixed(2)}<br>
                 Average Lemon Quality Used: ${avgQualityUsed.toFixed(2)}<br>
+                <strong>Weekly Efficiency Ratio: ${weeklyEfficiencyRatio}</strong><br>
                 ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
 
@@ -488,11 +494,13 @@
         }
 
         function endGame() {
+            const overallEfficiencyRatio = gameState.cumulativeExpenses > 0 ? (gameState.cumulativeIncome / gameState.cumulativeExpenses).toFixed(2) : 'N/A';
             elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>
                 Total Profit: $${gameState.totalProfit.toFixed(2)}<br>
                 Final Bankroll: $${gameState.bankroll.toFixed(2)}<br>
-                Cumulative Revenue: $${gameState.cumulativeRevenue.toFixed(2)}<br>
-                Cumulative Expenses: $${gameState.cumulativeExpenses.toFixed(2)}`;
+                Cumulative Income: $${gameState.cumulativeIncome.toFixed(2)}<br>
+                Cumulative Expenses: $${gameState.cumulativeExpenses.toFixed(2)}<br>
+                <strong>Overall Efficiency Ratio: ${overallEfficiencyRatio}</strong>`;
             elements.inputForm.style.display = 'none';
             elements.restart.style.display = 'block';
         }
