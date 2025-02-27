@@ -124,7 +124,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($40, sells 80 cups), Experienced ($100, sells 210 cups), Manager ($90, sells 130 cups + boosts others by 30%). At least one required.</p>
+            <p class="note">Intern ($30, sells 80 cups), Experienced ($80, sells 210 cups), Manager ($70, sells 130 cups + boosts others by 30%). At least one required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -171,9 +171,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 40, capacity: 80 },  // Increased by 10 from 70
-            experienced: { wage: 100, capacity: 210 },  // Increased by 10 from 200
-            manager: { wage: 90, capacity: 130, boost: 0.3 }  // Increased by 10 from 120
+            intern: { wage: 30, capacity: 80 },  // Increased by 10 from 70
+            experienced: { wage: 80, capacity: 210 },  // Increased by 10 from 200
+            manager: { wage: 70, capacity: 130, boost: 0.3 }  // Increased by 10 from 120
         };
 
         const gameState = {
@@ -431,8 +431,8 @@ function getRecipeDemandMultiplier(lemons, sugar) {
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-            // Adjusted sign effectiveness: 50 base customers with 10% increase per week
-            const signEffectiveness = 50 * (1 + 0.10 * (gameState.week - 1));
+            // Adjusted sign effectiveness: 70 base customers with 20% increase per week
+            const signEffectiveness = 70 * (1 + 0.20 * (gameState.week - 1));
             let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
