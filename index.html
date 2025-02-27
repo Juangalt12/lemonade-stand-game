@@ -159,15 +159,15 @@
     </div>
 
     <script>
-        const INITIAL_BANKROLL = 650;  // Increased from 600 to 650
+        const INITIAL_BANKROLL = 650;
         const MIN_WHOLESALE_LEMONS = 25;
         const WHOLESALE_INCREMENT = 25;
         const SUGAR_COST = 0.05;
         const SIGN_COST = 20;
         const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
-        const BASE_CUSTOMERS = 320;  // Increased from 270 to 320
-        const SPOILAGE_RATE = 0.15;  // Increased from 0.1 to 0.15 (15%)
+        const BASE_CUSTOMERS = 320;
+        const SPOILAGE_RATE = 0.15;
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
@@ -395,6 +395,7 @@
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
             let baseDemand = BASE_CUSTOMERS;
+            baseDemand += (gameState.week - 1) * 20;  // Natural increase in base demand by 20 each week
             baseDemand += signs * 20;
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
