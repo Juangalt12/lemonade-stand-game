@@ -196,7 +196,8 @@
             loanAmount: 0,
             remainingLoan: 0,
             loanInterestRate: 0.05,
-            loanRepaymentWeeks: 5
+            loanRepaymentWeeks: 5,
+            reputation: 50  // Added reputation starting at 50
         };
 
         const elements = {
@@ -235,6 +236,7 @@
             gameState.loanTaken = false;
             gameState.loanAmount = 0;
             gameState.remainingLoan = 0;
+            gameState.reputation = 50;  // Reset reputation to 50 on game start/restart
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
@@ -337,9 +339,9 @@
             return totalLemons > 0 ? totalQuality / totalLemons : 0;
         }
 
-function getRecipeDemandMultiplier(lemons, sugar) {
-    return 0.70 + 0.20 * lemons + 0.05 * sugar;
-}
+        function getRecipeDemandMultiplier(lemons, sugar) {
+            return 0.70 + 0.20 * lemons + 0.05 * sugar;
+        }
 
         function updateCostFeedback() {
             const vendor = document.getElementById('vendor').value;
@@ -427,13 +429,21 @@ function getRecipeDemandMultiplier(lemons, sugar) {
             gameState.lemonsInventory[quality] += buyLemons;
             gameState.sugarInventory += buySugar;
 
+            // Calculate reputation increase
+            const reputationIncrease = lemonsPerCup + sugarPerCup + (specialIngredient !== "none" ? 2 : 0) + (2 * signs);
+            gameState.reputation += reputationIncrease;
+
+            // Calculate demand boost from reputation
+            const excessReputation = Math.max(0, gameState.reputation - 50);
+            const demandBoost = excessReputation + (excessReputation / 100 * BASE_CUSTOMERS);
+
             let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
             // Adjusted sign effectiveness: 70 base customers with 20% increase per week
             const signEffectiveness = 70 * (1 + 0.20 * (gameState.week - 1));
-            let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
+            let baseDemand = BASE_CUSTOMERS + demandBoost + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
             baseDemand *= (1 + SPECIAL_INGREDIENTS[specialIngredient].demandBoost);
