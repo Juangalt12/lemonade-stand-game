@@ -135,7 +135,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($44, sells 70 cups), Experienced ($106, sells 200 cups), Manager ($114, sells 100 cups + boosts others by 30%). At least one employee required.</p>
+            <p class="note">Intern ($44, sells 70 cups), Experienced ($106, sells 200 cups), Manager ($114, sells 120 cups + boosts others by 30%). At least one employee required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -342,7 +342,7 @@
 
             const totalCostPerCup = materialsCostPerCup + employeeCostPerCup;
 
-            elements.costFeedback.innerHTML = `Materials Cost per Cup: $${materialsCostPerCup.toFixed(2)}<br>Total Cost per Cup (incl. employees): $${totalCostPerCup.toFixed(2)}<br>Total purchases cost: $${totalPurchaseCost.toFixed(2)}`;
+            elements.costFeedback.innerHTML = `Materials Cost per Cup: $${materialsCostPerCup.toFixed(2)}<br>Total Cost per Cup (incl. employees): $${totalCostPerCup.toFixed(2)}<br><strong>Total purchases cost: $${totalPurchaseCost.toFixed(2)}</strong>`;
             elements.costFeedback.className = (gameState.bankroll - totalPurchaseCost < 0) ? 'warning' : 'note';
         }
 
@@ -373,13 +373,6 @@
             }
             if (interns + experienced + managers === 0) {
                 errors.push("You must hire at least one employee.");
-            }
-            const totalLemonsNeeded = lemonsPerCup * Math.min(gameState.sugarInventory + buySugar, sugarPerCup * (interns * EMPLOYEE_TYPES.intern.capacity + experienced * EMPLOYEE_TYPES.experienced.capacity + managers * EMPLOYEE_TYPES.manager.capacity));
-            if (gameState.lemonsInventory[1] + gameState.lemonsInventory[2] + gameState.lemonsInventory[3] + gameState.lemonsInventory[4] + buyLemons < totalLemonsNeeded) {
-                errors.push("Not enough lemons for the recipe and employees.");
-            }
-            if (gameState.sugarInventory + buySugar < sugarPerCup * totalLemonsNeeded / lemonsPerCup) {
-                errors.push("Not enough sugar for the recipe and employees.");
             }
             const totalCost = (buyLemons * lemonPrice) + (buySugar * SUGAR_COST) + (signs * SIGN_COST) +
                             (interns * EMPLOYEE_TYPES.intern.wage) + (experienced * EMPLOYEE_TYPES.experienced.wage) + (managers * EMPLOYEE_TYPES.manager.wage);
