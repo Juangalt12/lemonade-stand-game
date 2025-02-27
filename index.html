@@ -54,30 +54,12 @@
             transform: scale(1.05);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-        #inventory {
-            background: #fffacd;
-            border-color: #ffd700;
-        }
-        #results {
-            background: #e0ffe0;
-            border-color: #32cd32;
-        }
-        #history {
-            background: #f0f8ff;
-            border-color: #4682b4;
-        }
-        #costFeedback {
-            background: #fafad2;
-            border-color: #f4a460;
-            margin-top: 10px;
-            font-style: italic;
-            color: #666;
-        }
+        #inventory { background: #fffacd; border-color: #ffd700; }
+        #results { background: #e0ffe0; border-color: #32cd32; }
+        #history { background: #f0f8ff; border-color: #4682b4; }
+        #costFeedback { background: #fafad2; border-color: #f4a460; margin-top: 10px; font-style: italic; color: #666; }
         #inventory, #results, #history, #costFeedback {
-            padding: 15px;
-            border: 2px solid;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 15px; border: 2px solid; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .note { font-style: italic; color: #666; }
         .error { color: red; font-weight: bold; }
@@ -91,6 +73,12 @@
     <div class="container">
         <h1>Lemonade Stand Game</h1>
         <p id="weekIndicator">Week 1 of 6</p>
+        <div id="loanSection" style="display: block;">
+            <label for="loanAmount">Loan Amount ($66-$1000):</label>
+            <input type="number" id="loanAmount" min="66" max="1000" value="66">
+            <button type="button" id="takeLoanButton">Take a Loan</button>
+            <p class="note">Note: Loan is repaid over Weeks 2-6 with 10% interest per week on the outstanding balance, deducted automatically each week.</p>
+        </div>
         <p>Run your lemonade stand for 6 weeks to maximize profit! Manage your bankroll, inventory, and employees wisely.</p>
         <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales. Tips are added each week!</p>
         <div id="inventory">
@@ -172,10 +160,10 @@
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
-            mint: { name: "Mint", cost: 0.21, demandBoost: 0.105 },    // +10.5%
-            basil: { name: "Basil", cost: 0.28, demandBoost: 0.14 },   // +14%
-            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.175 },// +17.5%
-            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.21 } // +21%
+            mint: { name: "Mint", cost: 0.21, demandBoost: 0.105 },
+            basil: { name: "Basil", cost: 0.28, demandBoost: 0.14 },
+            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.175 },
+            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.21 }
         };
         const CUP_TYPES = {
             paper: { name: "Cheap Paper Cups", cost: 0.03, demandBoost: -0.05 },
@@ -192,8 +180,8 @@
             week: 1,
             bankroll: INITIAL_BANKROLL,
             totalProfit: 0,
-            cumulativeIncome: 0,  // Tracks total income (revenue + tips)
-            cumulativeExpenses: 0, // Tracks total expenses
+            cumulativeIncome: 0,
+            cumulativeExpenses: 0,
             wordOfMouthBonus: 0,
             lemonsInventory: {1: 0, 2: 0, 3: 0, 4: 0},
             sugarInventory: 0,
@@ -201,7 +189,12 @@
             history: [],
             poorQualityPenaltyNextWeek: false,
             previousRevenue: 0,
-            firstWeekRevenue: 0
+            firstWeekRevenue: 0,
+            loanTaken: false,
+            loanAmount: 0,
+            remainingLoan: 0,
+            loanInterestRate: 0.1,
+            loanRepaymentWeeks: 5
         };
 
         const elements = {
@@ -214,7 +207,10 @@
             historyContent: document.getElementById('historyContent'),
             inputForm: document.getElementById('inputForm'),
             restart: document.getElementById('restart'),
-            costFeedback: document.getElementById('costFeedback')
+            costFeedback: document.getElementById('costFeedback'),
+            loanSection: document.getElementById('loanSection'),
+            loanButton: document.getElementById('takeLoanButton'),
+            loanInput: document.getElementById('loanAmount')
         };
 
         initializeGame();
@@ -232,10 +228,43 @@
             gameState.poorQualityPenaltyNextWeek = false;
             gameState.previousRevenue = 0;
             gameState.firstWeekRevenue = 0;
+            gameState.loanTaken = false;
+            gameState.loanAmount = 0;
+            gameState.remainingLoan = 0;
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
             updateCostFeedback();
+            elements.loanSection.style.display = gameState.week === 1 ? 'block' : 'none';
+            elements.loanButton.addEventListener('click', takeLoan);
+        }
+
+        function takeLoan() {
+            const loanAmount = parseInt(elements.loanInput.value);
+            if (loanAmount >= 66 && loanAmount <= 1000 && gameState.week === 1 && !gameState.loanTaken) {
+                gameState.loanTaken = true;
+                gameState.loanAmount = loanAmount;
+                gameState.remainingLoan = loanAmount;
+                gameState.bankroll += loanAmount;
+                elements.errors.innerHTML = `Loan of $${loanAmount} taken! Repayments start next week.`;
+                elements.loanSection.style.display = 'none';
+                updateInventoryDisplay();
+            } else {
+                elements.errors.innerHTML = 'Loan amount must be between $66 and $1000, and can only be taken in Week 1.';
+            }
+        }
+
+        function repayLoan() {
+            if (gameState.loanTaken && gameState.week >= 2 && gameState.week <= MAX_WEEKS && gameState.remainingLoan > 0) {
+                const remainingWeeks = MAX_WEEKS - gameState.week + 1;
+                const principalPayment = gameState.loanAmount / gameState.loanRepaymentWeeks;
+                const interestPayment = gameState.remainingLoan * gameState.loanInterestRate;
+                const repaymentAmount = principalPayment + interestPayment;
+                gameState.bankroll -= repaymentAmount;
+                gameState.remainingLoan -= principalPayment;
+                if (gameState.remainingLoan <= 0) gameState.remainingLoan = 0;
+                elements.errors.innerHTML += `<br>Loan repayment this week: $${repaymentAmount.toFixed(2)} (Remaining: $${gameState.remainingLoan.toFixed(2)})`;
+            }
         }
 
         function generateVendorOffers() {
@@ -418,8 +447,7 @@
             const sugarCostPerCup = sugarPerCup * SUGAR_COST;
             const specialIngredientCost = SPECIAL_INGREDIENTS[specialIngredient].cost;
             const cupCost = CUP_TYPES[cupType].cost;
-            const costPerCup = lemonCostPerCup + sugarCostPerCup + specialIngredientCost + cupCost;
-            const totalVariableCosts = cupsSold * costPerCup;
+            const totalVariableCosts = cupsSold * (lemonCostPerCup + sugarCostPerCup + specialIngredientCost + cupCost);
             const fixedCosts = (interns * EMPLOYEE_TYPES.intern.wage) + (experienced * EMPLOYEE_TYPES.experienced.wage) + (managers * EMPLOYEE_TYPES.manager.wage) + (signs * SIGN_COST);
             let spoiledLemons = 0;
             for (let q in gameState.lemonsInventory) {
@@ -431,17 +459,15 @@
             gameState.bankroll -= spoilageCost;
 
             let tips = Math.floor(Math.random() * 61) + 10;
-            if (specialIngredient !== "none") {
-                tips *= 2;  // Double tips if a special ingredient is used
-            }
+            if (specialIngredient !== "none") tips *= 2;
             gameState.bankroll += tips;
 
             const totalExpenses = fixedCosts + totalVariableCosts + spoilageCost;
             const totalIncome = revenue + tips;
-            const weeklyEfficiencyRatio = totalExpenses > 0 ? (totalIncome / totalExpenses).toFixed(2) : 'N/A';
+            const profit = totalIncome - totalExpenses;
+            const weeklyEfficiencyRatio = profit > 0 ? ((totalExpenses / profit) * 100).toFixed(2) + '%' : 'N/A';
             gameState.cumulativeIncome += totalIncome;
             gameState.cumulativeExpenses += totalExpenses;
-            const profit = totalIncome - totalExpenses;
             gameState.totalProfit += profit;
 
             const lemonsNeeded = cupsSold * lemonsPerCup;
@@ -463,6 +489,8 @@
 
             const totalSugarUsed = cupsSold * sugarPerCup;
             gameState.sugarInventory -= totalSugarUsed;
+
+            repayLoan();
 
             const weekResult = `Week ${gameState.week} Results:<br>
                 Cups Sold: ${cupsSold}<br>
@@ -487,6 +515,7 @@
             }
 
             elements.weekIndicator.textContent = `Week ${gameState.week} of ${MAX_WEEKS}`;
+            elements.loanSection.style.display = 'none';
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
@@ -494,10 +523,12 @@
         }
 
         function endGame() {
-            const overallEfficiencyRatio = gameState.cumulativeExpenses > 0 ? (gameState.cumulativeIncome / gameState.cumulativeExpenses).toFixed(2) : 'N/A';
+            const totalEarnings = gameState.totalProfit + gameState.bankroll;
+            const overallEfficiencyRatio = gameState.totalProfit > 0 ? ((gameState.cumulativeExpenses / gameState.totalProfit) * 100).toFixed(2) + '%' : 'N/A';
             elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>
                 Total Profit: $${gameState.totalProfit.toFixed(2)}<br>
                 Final Bankroll: $${gameState.bankroll.toFixed(2)}<br>
+                <strong>Total Earnings: $${totalEarnings.toFixed(2)}</strong><br>
                 Cumulative Income: $${gameState.cumulativeIncome.toFixed(2)}<br>
                 Cumulative Expenses: $${gameState.cumulativeExpenses.toFixed(2)}<br>
                 <strong>Overall Efficiency Ratio: ${overallEfficiencyRatio}</strong>`;
@@ -522,9 +553,6 @@
                 input.addEventListener('input', updateCostFeedback);
             }
         });
-
-        updateQualityOptions();
-        updateCostFeedback();
     </script>
 </body>
 </html>
