@@ -530,13 +530,18 @@
 
         function endGame() {
             const cumulativeEfficiencyRatio = gameState.cumulativeRevenue > 0 ? (((gameState.cumulativeOpExpenses + gameState.cumulativeLoanInterest) / gameState.cumulativeRevenue) * 100).toFixed(2) : 'N/A';
+            const totalProfit = (gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanInterest).toFixed(2);
+            const totalValue = (parseFloat(totalProfit) + gameState.bankroll).toFixed(2);
             elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>
                 Total Revenue (Sales + Tips): $${gameState.cumulativeRevenue.toFixed(2)}<br>
                 Total Operational Expenses: $${gameState.cumulativeOpExpenses.toFixed(2)}<br>
                 Total Loan Interest: $${gameState.cumulativeLoanInterest.toFixed(2)}<br>
-                Total Profit: $${(gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanInterest).toFixed(2)}<br>
+                Total Profit: $${totalProfit}<br>
+                Final Bankroll: $${gameState.bankroll.toFixed(2)}<br>
+                <strong>Total Value at End: $${totalValue}</strong><br>
                 <strong>Overall Efficiency Ratio: ${cumulativeEfficiencyRatio}%</strong><br>
-                <p class="note">Efficiency Ratio = (Operational Expenses + Loan Interest) / Total Revenue × 100%. Lower is better.</p>`;
+                <p class="note">Efficiency Ratio = (Operational Expenses + Loan Interest) / Total Revenue × 100%. Lower is better.</p>
+                <p class="note">Total Value at End = Total Profit + Final Bankroll.</p>`;
             elements.inputForm.style.display = 'none';
             elements.restart.style.display = 'block';
         }
