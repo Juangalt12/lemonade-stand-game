@@ -92,7 +92,7 @@
         <h1>Lemonade Stand Game</h1>
         <p id="weekIndicator">Week 1 of 6</p>
         <p>Run your lemonade stand for 6 weeks to maximize profit! Manage your bankroll, inventory, and employees wisely.</p>
-        <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales in current and future weeks.</p>
+        <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales. Tips are added each week!</p>
         <div id="inventory">
             <h2>Inventory</h2>
             <p class="highlight">Bankroll: $<span id="bankroll">600.00</span></p>
@@ -135,7 +135,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($44, sells 70 cups), Experienced ($106, sells 200 cups), Manager ($114, sells 120 cups + boosts others by 30%). At least one employee required.</p>
+            <p class="note">Intern ($40, sells 70 cups), Experienced ($100, sells 200 cups), Manager ($90, sells 120 cups + boosts others by 30%). At least one required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -182,9 +182,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 44, capacity: 70 },
-            experienced: { wage: 106, capacity: 200 },
-            manager: { wage: 114, capacity: 120, boost: 0.3 }
+            intern: { wage: 40, capacity: 70 },      // Updated to $40
+            experienced: { wage: 100, capacity: 200 }, // Updated to $100
+            manager: { wage: 90, capacity: 120, boost: 0.3 } // Updated to $90
         };
 
         const gameState = {
@@ -420,10 +420,12 @@
 
             const totalLemonsUsed = cupsSold * lemonsPerCup;
             const totalSugarUsed = cupsSold * sugarPerCup;
+            let remainingLemonsToUse = totalLemonsUsed;
             for (let q = 4; q >= 1; q--) {
-                if (totalLemonsUsed > 0) {
-                    const lemonsToUse = Math.min(gameState.lemonsInventory[q], totalLemonsUsed);
+                if (remainingLemonsToUse > 0) {
+                    const lemonsToUse = Math.min(gameState.lemonsInventory[q], remainingLemonsToUse);
                     gameState.lemonsInventory[q] -= lemonsToUse;
+                    remainingLemonsToUse -= lemonsToUse;
                 }
             }
             gameState.sugarInventory -= totalSugarUsed;
@@ -441,6 +443,11 @@
                 gameState.cumulativeExpenses += spoiled * SPOILAGE_COST_PER_LEMON;
             }
 
+            // Add random tips between $10 and $70
+            const tips = Math.floor(Math.random() * 61) + 10; // Generates a number between 10 and 70
+            gameState.bankroll += tips;
+            gameState.totalProfit += tips;
+
             if (gameState.week === 1) {
                 gameState.firstWeekRevenue = revenue;
             }
@@ -450,8 +457,9 @@
                 Cups Sold: ${cupsSold}<br>
                 Revenue: $${revenue.toFixed(2)}<br>
                 Expenses: $${(totalCost + totalMaterialsCost).toFixed(2)}<br>
+                Tips: $${tips.toFixed(2)}<br>
                 Spoiled Lemons: ${spoiledLemons} (Cost: $${(spoiledLemons * SPOILAGE_COST_PER_LEMON).toFixed(2)})<br>
-                Profit: $${(revenue - totalCost - totalMaterialsCost).toFixed(2)}<br>
+                Profit: $${(revenue + tips - totalCost - totalMaterialsCost).toFixed(2)}<br>
                 Average Lemon Quality Used: ${avgQuality.toFixed(2)}<br>
                 ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
