@@ -77,7 +77,7 @@
             <label for="loanAmount">Loan Amount ($66-$1000):</label>
             <input type="number" id="loanAmount" min="66" max="1000" value="66">
             <button type="button" id="takeLoanButton">Take a Loan</button>
-            <p class="note">Note: Loan is repaid over Weeks 2-6 with 10% interest per week on the outstanding balance, deducted automatically each week.</p>
+            <p class="note">Note: Loan is repaid over Weeks 2–6. Each week, you pay 1/5 of the original amount plus 5% interest on the remaining loan balance.</p>
         </div>
         <p>Run your lemonade stand for 6 weeks to maximize profit! Manage your bankroll, inventory, and employees wisely.</p>
         <p class="note">Higher quality lemons, a good recipe, and special ingredients boost taste and sales. Tips are added each week!</p>
@@ -182,8 +182,8 @@
             totalProfit: 0,
             cumulativeRevenue: 0,
             cumulativeOpExpenses: 0,
-            cumulativeLoanRepayments: 0,
-            cumulativetips: 0,
+            cumulativeLoanInterest: 0,
+            cumulativeTips: 0,
             wordOfMouthBonus: 0,
             lemonsInventory: {1: 0, 2: 0, 3: 0, 4: 0},
             sugarInventory: 0,
@@ -195,7 +195,7 @@
             loanTaken: false,
             loanAmount: 0,
             remainingLoan: 0,
-            loanInterestRate: 0.1,
+            loanInterestRate: 0.05, // 5% per week
             loanRepaymentWeeks: 5
         };
 
@@ -223,8 +223,8 @@
             gameState.totalProfit = 0;
             gameState.cumulativeRevenue = 0;
             gameState.cumulativeOpExpenses = 0;
-            gameState.cumulativeLoanRepayments = 0;
-            gameState.cumulativetips = 0;
+            gameState.cumulativeLoanInterest = 0;
+            gameState.cumulativeTips = 0;
             gameState.wordOfMouthBonus = 0;
             gameState.lemonsInventory = {1: 0, 2: 0, 3: 0, 4: 0};
             gameState.sugarInventory = 0;
@@ -270,11 +270,11 @@
                     return true;
                 }
                 gameState.bankroll -= repaymentAmount;
-                gameState.cumulativeLoanRepayments += repaymentAmount;
                 gameState.remainingLoan -= principalPayment;
+                gameState.cumulativeLoanInterest += interestPayment;
                 if (gameState.remainingLoan <= 0) gameState.remainingLoan = 0;
-                elements.errors.innerHTML += `<br>Loan repayment this week: $${repaymentAmount.toFixed(2)} (Remaining: $${gameState.remainingLoan.toFixed(2)})`;
-                return repaymentAmount; // Return the repayment amount for this week
+                elements.errors.innerHTML += `<br>Loan repayment this week: $${repaymentAmount.toFixed(2)} (Principal: $${principalPayment.toFixed(2)}, Interest: $${interestPayment.toFixed(2)})`;
+                return interestPayment; // Return interest for efficiency ratio
             }
             return 0;
         }
@@ -486,23 +486,28 @@
             }
 
             const tips = Math.floor(Math.random() * 61) + 10;
-            gameState.cumulativetips += tips;
+            gameState.cumulativeTips += tips;
             gameState.bankroll += tips;
             gameState.cumulativeRevenue += tips;
 
-            const loanRepayment = repayLoan();
-            if (loanRepayment === true) return; // Bankruptcy check
+            const loanInterest = repayLoan();
+            if (loanInterest === true) return; // Bankruptcy check
+            const weeklyOpExpenses = totalCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
+            const weeklyRevenue = revenue + tips;
+            const weeklyEfficiencyRatio = weeklyRevenue > 0 ? (((weeklyOpExpenses + loanInterest) / weeklyRevenue) * 100).toFixed(2) : 'N/A';
 
-            const profit = revenue + tips - totalCost - totalMaterialsCost - loanRepayment;
+            const profit = revenue + tips - weeklyOpExpenses - loanInterest;
 
             const weekResult = `Week ${gameState.week} Results:<br>
                 Cups Sold: ${cupsSold}<br>
                 Revenue: $${revenue.toFixed(2)}<br>
                 Tips: $${tips.toFixed(2)}<br>
-                Operational Expenses: $${(totalCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON)).toFixed(2)}<br>
-                ${loanRepayment > 0 ? `Loan Repayment: $${loanRepayment.toFixed(2)}<br>` : ''}
+                Operational Expenses: $${weeklyOpExpenses.toFixed(2)}<br>
+                Loan Interest: $${loanInterest.toFixed(2)}<br>
+                Total Expenses (Op + Interest): $${(weeklyOpExpenses + loanInterest).toFixed(2)}<br>
                 Profit: $${profit.toFixed(2)}<br>
                 Average Lemon Quality Used: ${avgQuality.toFixed(2)}<br>
+                <strong>Weekly Efficiency Ratio: ${weeklyEfficiencyRatio}%</strong><br>
                 ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
 
@@ -524,14 +529,14 @@
         }
 
         function endGame() {
-            const efficiencyRatio = gameState.cumulativeRevenue > 0 ? ((gameState.cumulativeOpExpenses / gameState.cumulativeRevenue) * 100).toFixed(2) : 'N/A';
+            const cumulativeEfficiencyRatio = gameState.cumulativeRevenue > 0 ? (((gameState.cumulativeOpExpenses + gameState.cumulativeLoanInterest) / gameState.cumulativeRevenue) * 100).toFixed(2) : 'N/A';
             elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>
                 Total Revenue (Sales + Tips): $${gameState.cumulativeRevenue.toFixed(2)}<br>
                 Total Operational Expenses: $${gameState.cumulativeOpExpenses.toFixed(2)}<br>
-                Total Loan Repayments: $${gameState.cumulativeLoanRepayments.toFixed(2)}<br>
-                Total Profit: $${(gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanRepayments).toFixed(2)}<br>
-                <strong>Efficiency Ratio: ${efficiencyRatio}%</strong><br>
-                <p class="note">This is the banking version of the Efficiency Ratio = (Operational Expenses / Total Revenue) × 100%. Lower is better. For example, if revenue is $100 and operational expenses are $75, the ratio is 75%, meaning 75 cents spent per dollar earned, leaving a $25 profit. Loan repayments are excluded as they are financing costs, not operational expenses.</p>`;
+                Total Loan Interest: $${gameState.cumulativeLoanInterest.toFixed(2)}<br>
+                Total Profit: $${(gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanInterest).toFixed(2)}<br>
+                <strong>Overall Efficiency Ratio: ${cumulativeEfficiencyRatio}%</strong><br>
+                <p class="note">Efficiency Ratio = (Operational Expenses + Loan Interest) / Total Revenue × 100%. Lower is better.</p>`;
             elements.inputForm.style.display = 'none';
             elements.restart.style.display = 'block';
         }
