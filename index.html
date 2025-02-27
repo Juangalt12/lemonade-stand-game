@@ -431,8 +431,8 @@ function getRecipeDemandMultiplier(lemons, sugar) {
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-            // Adjusted sign effectiveness: 20 base customers with 5% increase per week
-            const signEffectiveness = 20 * (1 + 0.05 * (gameState.week - 1));
+            // Adjusted sign effectiveness: 50 base customers with 10% increase per week
+            const signEffectiveness = 50 * (1 + 0.10 * (gameState.week - 1));
             let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
