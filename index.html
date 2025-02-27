@@ -84,6 +84,7 @@
         <div id="inventory">
             <h2>Inventory</h2>
             <p class="highlight">Bankroll: $<span id="bankroll">650.00</span></p>
+            <p>Reputation: <span id="reputation">50</span></p> <!-- Reputation display added -->
             Lemons: <span id="lemons">None</span><br>
             Sugar: <span id="sugar">0</span>
         </div>
@@ -124,7 +125,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($30, sells 80 cups), Experienced ($80, sells 210 cups), Manager ($70, sells 130 cups + boosts others by 30%). At least one required.</p>
+            <p class="note">Intern ($30, sells 160 cups), Experienced ($80, sells 420 cups), Manager ($70, sells 260 cups + boosts others by 30%). At least one required.</p> <!-- Updated capacities -->
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -155,15 +156,15 @@
         const SIGN_COST = 20;
         const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
-        const BASE_CUSTOMERS = 340;  // Increased by 70 from 270
+        const BASE_CUSTOMERS = 340;
         const SPOILAGE_RATE = 0.1;
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
             none: { name: "None", cost: 0, demandBoost: 0 },
-            mint: { name: "Mint", cost: 0.21, demandBoost: 0.04 },  // Doubled from 0.02
-            basil: { name: "Basil", cost: 0.28, demandBoost: 0.06 },  // Doubled from 0.03
-            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.10 },  // Doubled from 0.05
-            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.20 }  // Doubled from 0.10
+            mint: { name: "Mint", cost: 0.21, demandBoost: 0.04 },
+            basil: { name: "Basil", cost: 0.28, demandBoost: 0.06 },
+            ginger: { name: "Ginger", cost: 0.35, demandBoost: 0.10 },
+            lavender: { name: "Lavender", cost: 0.42, demandBoost: 0.20 }
         };
         const CUP_TYPES = {
             paper: { name: "Cheap Paper Cups", cost: 0.03, demandBoost: -0.05 },
@@ -171,9 +172,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 30, capacity: 80 },  // Increased by 10 from 70
-            experienced: { wage: 80, capacity: 210 },  // Increased by 10 from 200
-            manager: { wage: 70, capacity: 130, boost: 0.3 }  // Increased by 10 from 120
+            intern: { wage: 30, capacity: 160 },     // Doubled from 80
+            experienced: { wage: 80, capacity: 420 }, // Doubled from 210
+            manager: { wage: 70, capacity: 260, boost: 0.3 } // Doubled from 130
         };
 
         const gameState = {
@@ -197,12 +198,13 @@
             remainingLoan: 0,
             loanInterestRate: 0.05,
             loanRepaymentWeeks: 5,
-            reputation: 50  // Added reputation starting at 50
+            reputation: 50  // Starting reputation
         };
 
         const elements = {
             weekIndicator: document.getElementById('weekIndicator'),
             bankroll: document.getElementById('bankroll'),
+            reputation: document.getElementById('reputation'), // Element for reputation display
             lemons: document.getElementById('lemons'),
             sugar: document.getElementById('sugar'),
             errors: document.getElementById('errors'),
@@ -236,7 +238,7 @@
             gameState.loanTaken = false;
             gameState.loanAmount = 0;
             gameState.remainingLoan = 0;
-            gameState.reputation = 50;  // Reset reputation to 50 on game start/restart
+            gameState.reputation = 50; // Reset reputation on restart
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
@@ -276,7 +278,7 @@
                 gameState.cumulativeLoanInterest += interestPayment;
                 if (gameState.remainingLoan <= 0) gameState.remainingLoan = 0;
                 elements.errors.innerHTML += `<br>Loan repayment this week: $${repaymentAmount.toFixed(2)} (Principal: $${principalPayment.toFixed(2)}, Interest: $${interestPayment.toFixed(2)})`;
-                return interestPayment; // Return interest for efficiency ratio
+                return interestPayment;
             }
             return 0;
         }
@@ -287,13 +289,13 @@
             const topNotchQualities = [4, ...topNotchOther];
             gameState.vendorOffers.topnotch = topNotchQualities.map(q => {
                 const basePrice = 0.5 * q;
-                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1; // Reduced by 10 cents
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1;
                 return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
             const wholesaleQualities = shuffle(qualities).slice(0,3);
             gameState.vendorOffers.wholesale = wholesaleQualities.map(q => {
                 const basePrice = 0.5 * q * 0.7;
-                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1; // Reduced by 10 cents
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1;
                 return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
         }
@@ -322,6 +324,7 @@
             elements.lemons.innerHTML = lemonsStr || 'None';
             elements.sugar.textContent = gameState.sugarInventory;
             elements.bankroll.textContent = gameState.bankroll.toFixed(2);
+            elements.reputation.textContent = gameState.reputation.toFixed(0); // Update reputation display
         }
 
         function shuffle(array) {
@@ -429,19 +432,18 @@
             gameState.lemonsInventory[quality] += buyLemons;
             gameState.sugarInventory += buySugar;
 
-            // Calculate reputation increase
+            // Reputation increases based on recipe, signs, and special ingredients
             const reputationIncrease = lemonsPerCup + sugarPerCup + (specialIngredient !== "none" ? 2 : 0) + (2 * signs);
             gameState.reputation += reputationIncrease;
 
-            // Calculate demand boost from reputation
+            // Doubled reputation effect on demand
             const excessReputation = Math.max(0, gameState.reputation - 50);
-            const demandBoost = excessReputation + (excessReputation / 100 * BASE_CUSTOMERS);
+            const demandBoost = 2 * (excessReputation + (excessReputation / 100 * BASE_CUSTOMERS));
 
             let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-            // Adjusted sign effectiveness: 70 base customers with 20% increase per week
             const signEffectiveness = 70 * (1 + 0.20 * (gameState.week - 1));
             let baseDemand = BASE_CUSTOMERS + demandBoost + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
@@ -497,7 +499,7 @@
             gameState.cumulativeRevenue += tips;
 
             const loanInterest = repayLoan();
-            if (loanInterest === true) return; // Bankruptcy check
+            if (loanInterest === true) return;
             const weeklyOpExpenses = totalCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
             const weeklyRevenue = revenue + tips;
             const weeklyEfficiencyRatio = weeklyRevenue > 0 ? (((weeklyOpExpenses + loanInterest) / weeklyRevenue) * 100).toFixed(2) : 'N/A';
