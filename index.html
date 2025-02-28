@@ -102,8 +102,8 @@
             <input type="number" id="buyLemons" min="0" value="0"><br>
             <label for="buySugar">Sugar cubes to buy ($0.05 each):</label>
             <input type="number" id="buySugar" min="0" value="0"><br>
-            <label for="signs">Number of signs (0-5, $20 each):</label>
-            <input type="number" id="signs" min="0" max="5" value="0"><br>
+            <label for="signs">Number of signs (0-7, $15 each):</label>
+            <input type="number" id="signs" min="0" max="7" value="0"><br>
             <h2>Set Recipe</h2>
             <label for="lemonsPerCup">Lemons per cup (1-3):</label>
             <input type="number" id="lemonsPerCup" min="1" max="3" value="1"><br>
@@ -126,7 +126,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($30, sells 80 cups), Experienced ($80, sells 210 cups), Manager ($70, sells 130 cups + boosts others by 30%). At least one required.</p>
+            <p class="note">Intern ($30, sells 160 cups), Experienced ($80, sells 420 cups), Manager ($70, sells 260 cups + boosts others by 30%). At least one required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -154,10 +154,11 @@
         const MIN_WHOLESALE_LEMONS = 25;
         const WHOLESALE_INCREMENT = 25;
         const SUGAR_COST = 0.05;
-        const SIGN_COST = 20;
+        const SIGN_COST = 15;  // Decreased from $20 to $15
         const MAX_WEEKS = 6;
         const QUALITY_NAMES = {1: "Irregular", 2: "Average", 3: "Good", 4: "Prime"};
         const BASE_CUSTOMERS = 340;
+        const WEEKLY_DEMAND_INCREASE = 75;  // New weekly demand increase
         const SPOILAGE_RATE = 0.1;
         const SPOILAGE_COST_PER_LEMON = 0.1;
         const SPECIAL_INGREDIENTS = {
@@ -173,9 +174,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 30, capacity: 80 },
-            experienced: { wage: 80, capacity: 210 },
-            manager: { wage: 70, capacity: 130, boost: 0.3 }
+            intern: { wage: 30, capacity: 160 },     // Doubled from 80
+            experienced: { wage: 80, capacity: 420 }, // Doubled from 210
+            manager: { wage: 70, capacity: 260, boost: 0.3 } // Doubled from 130
         };
 
         const gameState = {
@@ -242,7 +243,7 @@
             updateQualityOptions();
             updateCostFeedback();
             elements.loanSection.style.display = gameState.week === 1 ? 'block' : 'none';
-            elements.loanButton.onclick = takeLoan; // Changed to onclick for single listener
+            elements.loanButton.onclick = takeLoan;
         }
 
         function takeLoan() {
@@ -417,7 +418,7 @@
                 return;
             }
 
-            // Deduct purchase costs (part of operational expenses)
+            // Deduct purchase costs
             gameState.bankroll -= purchaseCost;
             gameState.cumulativeOpExpenses += purchaseCost;
             gameState.lemonsInventory[quality] += buyLemons;
@@ -428,20 +429,23 @@
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-            // Calculate demand
+            // Calculate base demand with weekly increase
+            const baseDemand = BASE_CUSTOMERS + (gameState.week - 1) * WEEKLY_DEMAND_INCREASE;
+
+            // Calculate demand modifiers
             const signEffectiveness = 70 * (1 + 0.20 * (gameState.week - 1));
-            let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
+            let demand = baseDemand + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
-            baseDemand *= recipeMultiplier;
-            baseDemand *= (1 + SPECIAL_INGREDIENTS[specialIngredient].demandBoost);
-            baseDemand *= (1 + CUP_TYPES[cupType].demandBoost);
-            baseDemand += gameState.wordOfMouthBonus;
+            demand *= recipeMultiplier;
+            demand *= (1 + SPECIAL_INGREDIENTS[specialIngredient].demandBoost);
+            demand *= (1 + CUP_TYPES[cupType].demandBoost);
+            demand += gameState.wordOfMouthBonus;
             if (gameState.poorQualityPenaltyNextWeek) {
-                baseDemand *= 0.75;
+                demand *= 0.75;
                 gameState.poorQualityPenaltyNextWeek = false;
             }
             const priceFactor = salesPrice > 1.75 ? Math.max(0.25, 1 - ((salesPrice - 1.75) / 0.5) * 0.25) : 1;
-            const totalDemand = Math.floor(baseDemand * priceFactor);
+            const totalDemand = Math.floor(demand * priceFactor);
 
             // Determine cups sold
             const cupsSold = Math.min(totalCapacity, totalDemand, Math.floor((gameState.lemonsInventory[1] + gameState.lemonsInventory[2] + gameState.lemonsInventory[3] + gameState.lemonsInventory[4]) / lemonsPerCup), Math.floor(gameState.sugarInventory / sugarPerCup));
@@ -482,7 +486,7 @@
                 gameState.bankroll -= spoiled * SPOILAGE_COST_PER_LEMON;
             }
 
-            // Calculate profit (revenue - operational expenses, before loan)
+            // Calculate profit (before loan repayment)
             const weeklyOpExpenses = purchaseCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
             const profit = totalRevenue - weeklyOpExpenses;
             gameState.totalProfit += profit;
