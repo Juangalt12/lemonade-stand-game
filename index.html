@@ -439,9 +439,9 @@
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
-            // Sign effectiveness contributes to weekly demand increase of 85
-            const signEffectiveness = WEEKLY_DEMAND_INCREASE;
-            let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness * gameState.week);
+            // Adjusted sign effectiveness: 85 base customers with 20% increase per week
+            const signEffectiveness = 85 * (1 + 0.20 * (gameState.week - 1));
+            let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
             baseDemand *= (1 + SPECIAL_INGREDIENTS[specialIngredient].demandBoost);
@@ -452,10 +452,7 @@
                 gameState.poorQualityPenaltyNextWeek = false;
             }
             const priceFactor = salesPrice > 1.75 ? Math.max(0.25, 1 - ((salesPrice - 1.75) / 0.5) * 0.25) : 1;
-
-            // Apply reputation effect to demand (1% increase per point above 100)
-            const reputationBoost = Math.max(0, (gameState.reputation - 100) / 100);
-            let totalDemand = Math.floor(baseDemand * priceFactor * (1 + reputationBoost));
+            const totalDemand = Math.floor(baseDemand * priceFactor);
 
             const cupsSold = Math.min(totalCapacity, totalDemand, Math.floor((gameState.lemonsInventory[1] + gameState.lemonsInventory[2] + gameState.lemonsInventory[3] + gameState.lemonsInventory[4]) / lemonsPerCup), Math.floor(gameState.sugarInventory / sugarPerCup));
 
@@ -492,28 +489,19 @@
                 gameState.cumulativeOpExpenses += spoiled * SPOILAGE_COST_PER_LEMON;
             }
 
-            // Calculate tips with reputation boost
-            let baseTips = Math.floor(Math.random() * 61) + 10;
-            const tips = Math.floor(baseTips * (1 + reputationBoost));
+            const tips = Math.floor(Math.random() * 61) + 10;
             gameState.cumulativeTips += tips;
             gameState.bankroll += tips;
             gameState.cumulativeRevenue += tips;
-
-            // Calculate reputation increase
-            let reputationIncrease = 0;
-            if (specialIngredient !== 'none') reputationIncrease += 5;  // +5 for special ingredient
-            reputationIncrease += lemonsPerCup + sugarPerCup;  // +1 per lemon and sugar
-            if (avgQuality >= 3) reputationIncrease += 3;  // +3 if quality is "Good" or better
-            reputationIncrease = Math.min(12, reputationIncrease);  // Cap at 12
-            gameState.reputation += reputationIncrease;
 
             const loanInterest = repayLoan();
             if (loanInterest === true) return; // Bankruptcy check
             const weeklyOpExpenses = totalCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
             const weeklyRevenue = revenue + tips;
-            const weeklyEfficiencyRatio = weeklyRevenue > 0 ? (((weeklyOpExpenses + loanInterest) / weeklyRevenue) * 100).toFixed(2) : 'N/A';
+            const profit = weeklyRevenue - weeklyOpExpenses - loanInterest;
 
-            const profit = revenue + tips - weeklyOpExpenses - loanInterest;
+            // Calculate weekly efficiency ratio
+            const weeklyEfficiencyRatio = weeklyRevenue > 0 ? (((weeklyOpExpenses + loanInterest) / weeklyRevenue) * 100).toFixed(2) : 'N/A';
 
             const weekResult = `Week ${gameState.week} Results:<br>
                 Cups Sold: ${cupsSold}<br>
@@ -524,8 +512,6 @@
                 Total Expenses (Op + Interest): $${(weeklyOpExpenses + loanInterest).toFixed(2)}<br>
                 Profit: $${profit.toFixed(2)}<br>
                 Average Lemon Quality Used: ${avgQuality.toFixed(2)}<br>
-                Reputation Increase: +${reputationIncrease}<br>
-                New Reputation: ${gameState.reputation}<br>
                 <strong>Weekly Efficiency Ratio: ${weeklyEfficiencyRatio}%</strong><br>
                 ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
@@ -548,6 +534,7 @@
         }
 
         function endGame() {
+            // Calculate cumulative efficiency ratio
             const cumulativeEfficiencyRatio = gameState.cumulativeRevenue > 0 ? (((gameState.cumulativeOpExpenses + gameState.cumulativeLoanInterest) / gameState.cumulativeRevenue) * 100).toFixed(2) : 'N/A';
             const totalProfit = (gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanInterest).toFixed(2);
             const totalValue = (parseFloat(totalProfit) + gameState.bankroll).toFixed(2);
@@ -557,7 +544,6 @@
                 Total Loan Interest: $${gameState.cumulativeLoanInterest.toFixed(2)}<br>
                 Total Profit: $${totalProfit}<br>
                 Final Bankroll: $${gameState.bankroll.toFixed(2)}<br>
-                Final Reputation: ${gameState.reputation}<br>
                 <strong>Total Value at End: $${totalValue}</strong><br>
                 <strong>Overall Efficiency Ratio: ${cumulativeEfficiencyRatio}%</strong><br>
                 <p class="note">Efficiency Ratio = (Operational Expenses + Loan Interest) / Total Revenue × 100%. Lower is better.</p>
