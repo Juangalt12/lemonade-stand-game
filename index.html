@@ -79,14 +79,13 @@
             <label for="loanAmount">Loan Amount ($66-$1000):</label>
             <input type="number" id="loanAmount" min="66" max="1000" value="66">
             <button type="button" id="takeLoanButton">Take a Loan</button>
-            <p class="note">Note: Loan is repaid over Weeks 2–6. Each week, you pay 1/5 of the original amount plus 5% interest on the remaining balance.</p>
+            <p class="note">Note: Loan is repaid over Weeks 2–6. Each week, you pay 1/5 of the original amount plus 5% interest on the remaining loan balance.</p>
         </div>
         <p>Run your lemonade stand for 6 weeks to maximize profit! Manage your bankroll, marketing (signs), inventory, and employees wisely.</p>
         <p class="note">Higher quality lemons, a good recipe, more signs, and special ingredients boost taste and sales. Tips are added each week!</p>
         <div id="inventory">
             <h2>Inventory</h2>
             <p class="highlight">Bankroll: $<span id="bankroll">650.00</span></p>
-            <p>Reputation: <span id="reputation">50</span></p>
             Lemons: <span id="lemons">None</span><br>
             Sugar: <span id="sugar">0</span>
         </div>
@@ -127,7 +126,7 @@
                 <option value="crystal">Elegant Fake Crystal Glasses ($0.06 per cup, +5% demand)</option>
             </select><br>
             <h2>Hire Employees</h2>
-            <p class="note">Intern ($30, sells 160 cups), Experienced ($80, sells 420 cups), Manager ($70, sells 260 cups + boosts others by 30%). At least one required.</p>
+            <p class="note">Intern ($30, sells 80 cups), Experienced ($80, sells 210 cups), Manager ($70, sells 130 cups + boosts others by 30%). At least one required.</p>
             <label for="interns">Number of Interns:</label>
             <input type="number" id="interns" min="0" value="0"><br>
             <label for="experienced">Number of Experienced Salespeople:</label>
@@ -138,7 +137,7 @@
             <div id="costFeedback" class="note"></div>
             <label for="salesPrice">Sales Price per Cup ($): </label>
             <input type="number" id="salesPrice" min="0.01" step="0.01" value="2.00"><br>
-            <p class="note">Note: Prices above $2.00 reduce demand (e.g., $0.50 above $2.00 cuts demand by 25%).</p>
+            <p class="note">Note: Prices above $1.75 reduce demand (e.g., $0.50 above $1.75 cuts demand by 25%).</p>
             <button type="button" onclick="processWeek()">Submit Week</button>
         </form>
         <div id="errors" class="error"></div>
@@ -174,9 +173,9 @@
             crystal: { name: "Elegant Fake Crystal Glasses", cost: 0.06, demandBoost: 0.05 }
         };
         const EMPLOYEE_TYPES = {
-            intern: { wage: 30, capacity: 160 },
-            experienced: { wage: 80, capacity: 420 },
-            manager: { wage: 70, capacity: 260, boost: 0.3 }
+            intern: { wage: 30, capacity: 80 },
+            experienced: { wage: 80, capacity: 210 },
+            manager: { wage: 70, capacity: 130, boost: 0.3 }
         };
 
         const gameState = {
@@ -199,14 +198,12 @@
             loanAmount: 0,
             remainingLoan: 0,
             loanInterestRate: 0.05,
-            loanRepaymentWeeks: 5,
-            reputation: 50
+            loanRepaymentWeeks: 5
         };
 
         const elements = {
             weekIndicator: document.getElementById('weekIndicator'),
             bankroll: document.getElementById('bankroll'),
-            reputation: document.getElementById('reputation'),
             lemons: document.getElementById('lemons'),
             sugar: document.getElementById('sugar'),
             errors: document.getElementById('errors'),
@@ -240,13 +237,12 @@
             gameState.loanTaken = false;
             gameState.loanAmount = 0;
             gameState.remainingLoan = 0;
-            gameState.reputation = 50;
             generateVendorOffers();
             updateInventoryDisplay();
             updateQualityOptions();
             updateCostFeedback();
             elements.loanSection.style.display = gameState.week === 1 ? 'block' : 'none';
-            elements.loanButton.addEventListener('click', takeLoan);
+            elements.loanButton.onclick = takeLoan; // Changed to onclick for single listener
         }
 
         function takeLoan() {
@@ -265,24 +261,23 @@
         }
 
         function repayLoan() {
-            if (gameState.loanTaken && gameState.week >= 2 && gameState.week <= MAX_WEEKS && gameState.remainingLoan > 0) {
-                const principalPayment = gameState.loanAmount / gameState.loanRepaymentWeeks;
-                const interestPayment = gameState.remainingLoan * gameState.loanInterestRate;
-                const repaymentAmount = principalPayment + interestPayment;
-                if (gameState.bankroll < repaymentAmount) {
-                    elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>Bankruptcy! Insufficient funds to repay loan (needed $${repaymentAmount.toFixed(2)}).`;
-                    elements.inputForm.style.display = 'none';
-                    elements.restart.style.display = 'block';
-                    return true;
-                }
-                gameState.bankroll -= repaymentAmount;
-                gameState.remainingLoan -= principalPayment;
-                gameState.cumulativeLoanInterest += interestPayment;
-                if (gameState.remainingLoan <= 0) gameState.remainingLoan = 0;
-                elements.errors.innerHTML += `<br>Loan repayment this week: $${repaymentAmount.toFixed(2)} (Principal: $${principalPayment.toFixed(2)}, Interest: $${interestPayment.toFixed(2)})`;
-                return interestPayment;
+            if (!gameState.loanTaken || gameState.week < 2 || gameState.week > MAX_WEEKS || gameState.remainingLoan <= 0) {
+                return { principal: 0, interest: 0, total: 0 };
             }
-            return 0;
+            const principalPayment = gameState.loanAmount / gameState.loanRepaymentWeeks;
+            const interestPayment = gameState.remainingLoan * gameState.loanInterestRate;
+            const repaymentAmount = principalPayment + interestPayment;
+            if (gameState.bankroll < repaymentAmount) {
+                elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>Bankruptcy! Insufficient funds to repay loan (needed $${repaymentAmount.toFixed(2)}).`;
+                elements.inputForm.style.display = 'none';
+                elements.restart.style.display = 'block';
+                return null; // Indicates bankruptcy
+            }
+            gameState.bankroll -= repaymentAmount;
+            gameState.remainingLoan -= principalPayment;
+            gameState.cumulativeLoanInterest += interestPayment;
+            if (gameState.remainingLoan < 0) gameState.remainingLoan = 0;
+            return { principal: principalPayment, interest: interestPayment, total: repaymentAmount };
         }
 
         function generateVendorOffers() {
@@ -291,14 +286,14 @@
             const topNotchQualities = [4, ...topNotchOther];
             gameState.vendorOffers.topnotch = topNotchQualities.map(q => {
                 const basePrice = 0.5 * q;
-                const reducedPrice = Math.max(0.05, (Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.15).toFixed(2));
-                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice };
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1;
+                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
             const wholesaleQualities = shuffle(qualities).slice(0,3);
             gameState.vendorOffers.wholesale = wholesaleQualities.map(q => {
                 const basePrice = 0.5 * q * 0.7;
-                const reducedPrice = Math.max(0.05, (Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.15).toFixed(2));
-                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice };
+                const reducedPrice = Math.round((basePrice * 0.6) / 0.1) * 0.1 - 0.1;
+                return { quality: q, name: QUALITY_NAMES[q], price: reducedPrice.toFixed(2) };
             });
         }
 
@@ -326,7 +321,6 @@
             elements.lemons.innerHTML = lemonsStr || 'None';
             elements.sugar.textContent = gameState.sugarInventory;
             elements.bankroll.textContent = gameState.bankroll.toFixed(2);
-            elements.reputation.textContent = gameState.reputation.toFixed(0);
         }
 
         function shuffle(array) {
@@ -364,9 +358,7 @@
             const lemonsPerCup = parseInt(document.getElementById('lemonsPerCup').value) || 0;
             const sugarPerCup = parseInt(document.getElementById('sugarPerCup').value) || 0;
             const specialIngredient = document.getElementById('specialIngredient').value;
-            const specialIngredientCost = SPECIAL_INGREDIENTS[specialIngredient].cost;
             const cupType = document.getElementById('cupType').value;
-            const cupCost = CUP_TYPES[cupType].cost;
 
             const costLemons = buyLemons * price;
             const costSugar = buySugar * SUGAR_COST;
@@ -376,13 +368,11 @@
                                 (managers * EMPLOYEE_TYPES.manager.wage);
             const totalPurchaseCost = costLemons + costSugar + costSigns + costEmployees;
 
-            const materialsCostPerCup = (lemonsPerCup * price) + (sugarPerCup * SUGAR_COST) + specialIngredientCost + cupCost;
-
+            const materialsCostPerCup = (lemonsPerCup * price) + (sugarPerCup * SUGAR_COST) + SPECIAL_INGREDIENTS[specialIngredient].cost + CUP_TYPES[cupType].cost;
             let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
             const employeeCostPerCup = totalCapacity > 0 ? (costEmployees / totalCapacity) : 0;
-
             const totalCostPerCup = materialsCostPerCup + employeeCostPerCup;
 
             elements.costFeedback.innerHTML = `Materials Cost per Cup: $${materialsCostPerCup.toFixed(2)}<br>Total Cost per Cup (incl. employees): $${totalCostPerCup.toFixed(2)}<br><strong>Total purchases cost: $${totalPurchaseCost.toFixed(2)}</strong>`;
@@ -393,8 +383,7 @@
             elements.errors.innerHTML = '';
 
             const vendor = document.getElementById('vendor').value;
-            const qualitySelect = document.getElementById('lemonQuality');
-            const quality = parseInt(qualitySelect.value);
+            const quality = parseInt(document.getElementById('lemonQuality').value);
             const buyLemons = parseInt(document.getElementById('buyLemons').value) || 0;
             const buySugar = parseInt(document.getElementById('buySugar').value) || 0;
             const signs = parseInt(document.getElementById('signs').value) || 0;
@@ -417,9 +406,9 @@
             if (interns + experienced + managers === 0) {
                 errors.push("You must hire at least one employee.");
             }
-            const totalCost = (buyLemons * lemonPrice) + (buySugar * SUGAR_COST) + (signs * SIGN_COST) +
-                            (interns * EMPLOYEE_TYPES.intern.wage) + (experienced * EMPLOYEE_TYPES.experienced.wage) + (managers * EMPLOYEE_TYPES.manager.wage);
-            if (totalCost > gameState.bankroll) {
+            const purchaseCost = (buyLemons * lemonPrice) + (buySugar * SUGAR_COST) + (signs * SIGN_COST) +
+                                (interns * EMPLOYEE_TYPES.intern.wage) + (experienced * EMPLOYEE_TYPES.experienced.wage) + (managers * EMPLOYEE_TYPES.manager.wage);
+            if (purchaseCost > gameState.bankroll) {
                 errors.push("Not enough money to cover purchases and wages.");
             }
 
@@ -428,24 +417,20 @@
                 return;
             }
 
-            gameState.bankroll -= totalCost;
-            gameState.cumulativeOpExpenses += totalCost;
-
+            // Deduct purchase costs (part of operational expenses)
+            gameState.bankroll -= purchaseCost;
+            gameState.cumulativeOpExpenses += purchaseCost;
             gameState.lemonsInventory[quality] += buyLemons;
             gameState.sugarInventory += buySugar;
 
-            const reputationIncrease = lemonsPerCup + sugarPerCup + (specialIngredient !== "none" ? 2 : 0) + (2 * signs);
-            gameState.reputation += reputationIncrease;
-
-            const excessReputation = Math.max(0, gameState.reputation - 50);
-            const demandBoost = 2 * (excessReputation + (excessReputation / 100 * BASE_CUSTOMERS));
-
+            // Calculate sales capacity
             let nonManagerCapacity = (interns * EMPLOYEE_TYPES.intern.capacity) + (experienced * EMPLOYEE_TYPES.experienced.capacity);
             const managerCapacity = managers * EMPLOYEE_TYPES.manager.capacity;
             const totalCapacity = managers > 0 ? Math.floor(nonManagerCapacity * (1 + EMPLOYEE_TYPES.manager.boost)) + managerCapacity : nonManagerCapacity + managerCapacity;
 
+            // Calculate demand
             const signEffectiveness = 70 * (1 + 0.20 * (gameState.week - 1));
-            let baseDemand = BASE_CUSTOMERS + demandBoost + (signs * signEffectiveness);
+            let baseDemand = BASE_CUSTOMERS + (signs * signEffectiveness);
             const recipeMultiplier = getRecipeDemandMultiplier(lemonsPerCup, sugarPerCup);
             baseDemand *= recipeMultiplier;
             baseDemand *= (1 + SPECIAL_INGREDIENTS[specialIngredient].demandBoost);
@@ -455,19 +440,26 @@
                 baseDemand *= 0.75;
                 gameState.poorQualityPenaltyNextWeek = false;
             }
-            const priceFactor = salesPrice > 2.00 ? Math.max(0.25, 1 - ((salesPrice - 2.00) / 0.5) * 0.25) : 1;
+            const priceFactor = salesPrice > 1.75 ? Math.max(0.25, 1 - ((salesPrice - 1.75) / 0.5) * 0.25) : 1;
             const totalDemand = Math.floor(baseDemand * priceFactor);
 
+            // Determine cups sold
             const cupsSold = Math.min(totalCapacity, totalDemand, Math.floor((gameState.lemonsInventory[1] + gameState.lemonsInventory[2] + gameState.lemonsInventory[3] + gameState.lemonsInventory[4]) / lemonsPerCup), Math.floor(gameState.sugarInventory / sugarPerCup));
 
-            const revenue = cupsSold * salesPrice;
-            gameState.cumulativeRevenue += revenue;
-            gameState.bankroll += revenue;
+            // Calculate revenue
+            const salesRevenue = cupsSold * salesPrice;
+            const tips = Math.floor(Math.random() * 61) + 10 * (specialIngredient !== 'none' ? 2 : 1);
+            const totalRevenue = salesRevenue + tips;
+            gameState.cumulativeRevenue += totalRevenue;
+            gameState.bankroll += totalRevenue;
 
+            // Calculate operational costs for cups sold
             const costPerCup = (lemonsPerCup * lemonPrice) + (sugarPerCup * SUGAR_COST) + SPECIAL_INGREDIENTS[specialIngredient].cost + CUP_TYPES[cupType].cost;
             const totalMaterialsCost = cupsSold * costPerCup;
             gameState.cumulativeOpExpenses += totalMaterialsCost;
+            gameState.bankroll -= totalMaterialsCost;
 
+            // Update inventory
             const totalLemonsUsed = cupsSold * lemonsPerCup;
             const totalSugarUsed = cupsSold * sugarPerCup;
             let remainingLemonsToUse = totalLemonsUsed;
@@ -480,50 +472,50 @@
             }
             gameState.sugarInventory -= totalSugarUsed;
 
-            const avgQuality = calculateAverageQuality();
-            gameState.poorQualityPenaltyNextWeek = avgQuality < 2;
-            gameState.wordOfMouthBonus = avgQuality > 3 ? Math.floor(revenue * 0.1) : 0;
-
+            // Handle spoilage
             let spoiledLemons = 0;
             for (let q in gameState.lemonsInventory) {
                 const spoiled = Math.floor(gameState.lemonsInventory[q] * SPOILAGE_RATE);
                 spoiledLemons += spoiled;
                 gameState.lemonsInventory[q] -= spoiled;
-                gameState.bankroll -= spoiled * SPOILAGE_COST_PER_LEMON;
                 gameState.cumulativeOpExpenses += spoiled * SPOILAGE_COST_PER_LEMON;
+                gameState.bankroll -= spoiled * SPOILAGE_COST_PER_LEMON;
             }
 
-            const baseTips = Math.floor(Math.random() * 61) + 10;
-            const tips = specialIngredient !== "none" ? baseTips * 2 : baseTips;
-            gameState.cumulativeTips += tips;
-            gameState.bankroll += tips;
-            gameState.cumulativeRevenue += tips;
+            // Calculate profit (revenue - operational expenses, before loan)
+            const weeklyOpExpenses = purchaseCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
+            const profit = totalRevenue - weeklyOpExpenses;
+            gameState.totalProfit += profit;
 
-            const loanInterest = repayLoan();
-            if (loanInterest === true) return;
-            const weeklyOpExpenses = totalCost + totalMaterialsCost + (spoiledLemons * SPOILAGE_COST_PER_LEMON);
-            const weeklyRevenue = revenue + tips;
-            const weeklyEfficiencyRatio = weeklyRevenue > 0 ? (((weeklyOpExpenses + loanInterest) / weeklyRevenue) * 100).toFixed(2) : 'N/A';
+            // Handle loan repayment
+            const repayment = repayLoan();
+            if (repayment === null) return; // Bankruptcy
+            const { principal, interest, total: repaymentAmount } = repayment;
 
-            const profit = revenue + tips - weeklyOpExpenses - loanInterest;
+            // Update quality effects
+            const avgQuality = calculateAverageQuality();
+            gameState.poorQualityPenaltyNextWeek = avgQuality < 2;
+            gameState.wordOfMouthBonus = avgQuality > 3 ? Math.floor(salesRevenue * 0.1) : 0;
 
+            // Display results
             const weekResult = `Week ${gameState.week} Results:<br>
                 Cups Sold: ${cupsSold}<br>
-                Revenue: $${revenue.toFixed(2)}<br>
+                Sales Revenue: $${salesRevenue.toFixed(2)}<br>
                 Tips: $${tips.toFixed(2)}<br>
+                Total Revenue: $${totalRevenue.toFixed(2)}<br>
                 Operational Expenses: $${weeklyOpExpenses.toFixed(2)}<br>
-                Loan Interest: $${loanInterest.toFixed(2)}<br>
-                Total Expenses (Op + Interest): $${(weeklyOpExpenses + loanInterest).toFixed(2)}<br>
-                Profit: $${profit.toFixed(2)}<br>
+                Profit (Revenue - Op Expenses): $${profit.toFixed(2)}<br>
+                Loan Repayment: $${repaymentAmount.toFixed(2)} (Principal: $${principal.toFixed(2)}, Interest: $${interest.toFixed(2)})<br>
+                New Bankroll: $${gameState.bankroll.toFixed(2)}<br>
                 Average Lemon Quality Used: ${avgQuality.toFixed(2)}<br>
-                <strong>Weekly Efficiency Ratio: ${weeklyEfficiencyRatio}%</strong><br>
-                ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality detected! Demand will decrease next week.</span>' : ''}
+                ${gameState.poorQualityPenaltyNextWeek ? '<span class="warning">Poor quality! Demand will decrease next week.</span>' : ''}
                 ${gameState.wordOfMouthBonus > 0 ? `<span class="hint">High quality! Word of mouth bonus next week: ${gameState.wordOfMouthBonus} extra customers.</span>` : ''}`;
 
             elements.results.innerHTML = weekResult;
             gameState.history.push(weekResult);
             elements.historyContent.innerHTML = gameState.history.join('<hr>');
 
+            // Advance week
             gameState.week++;
             if (gameState.week > MAX_WEEKS) {
                 endGame();
@@ -538,19 +530,15 @@
         }
 
         function endGame() {
-            const cumulativeEfficiencyRatio = gameState.cumulativeRevenue > 0 ? (((gameState.cumulativeOpExpenses + gameState.cumulativeLoanInterest) / gameState.cumulativeRevenue) * 100).toFixed(2) : 'N/A';
-            const totalProfit = (gameState.cumulativeRevenue - gameState.cumulativeOpExpenses - gameState.cumulativeLoanInterest).toFixed(2);
-            const totalValue = (parseFloat(totalProfit) + gameState.bankroll).toFixed(2);
+            const totalValue = (gameState.totalProfit + gameState.bankroll).toFixed(2);
             elements.results.innerHTML = `<span class="final-results">Game Over!</span><br>
                 Total Revenue (Sales + Tips): $${gameState.cumulativeRevenue.toFixed(2)}<br>
                 Total Operational Expenses: $${gameState.cumulativeOpExpenses.toFixed(2)}<br>
-                Total Loan Interest: $${gameState.cumulativeLoanInterest.toFixed(2)}<br>
-                Total Profit: $${totalProfit}<br>
+                Total Profit (Revenue - Op Expenses): $${gameState.totalProfit.toFixed(2)}<br>
+                Total Loan Interest Paid: $${gameState.cumulativeLoanInterest.toFixed(2)}<br>
                 Final Bankroll: $${gameState.bankroll.toFixed(2)}<br>
                 <strong>Total Value at End: $${totalValue}</strong><br>
-                <strong>Overall Efficiency Ratio: ${cumulativeEfficiencyRatio}%</strong><br>
-                <p class="note">Efficiency Ratio = (Operational Expenses + Loan Interest) / Total Revenue × 100%. Lower is better.</p>
-                <p class="note">Total Value at End = Total Profit + Final Bankroll.</p>`;
+                <p class="note">Total Value = Total Profit + Final Bankroll (after loan repayments).</p>`;
             elements.inputForm.style.display = 'none';
             elements.restart.style.display = 'block';
         }
